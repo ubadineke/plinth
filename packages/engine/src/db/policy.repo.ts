@@ -24,6 +24,7 @@ export interface TenantPolicy {
   billingMode: BillingMode;
   graceDays: number;
   maxDebtMinor: bigint;
+  allowMultipleSubscriptions: boolean;
   updatedAt: Date;
 }
 
@@ -36,6 +37,7 @@ const DEFAULTS = {
   billingMode:         'advance' as BillingMode,
   graceDays:           7,
   maxDebtMinor:        10_000_000n,
+  allowMultipleSubscriptions: false,
 };
 
 export interface TenantPolicyRepo {
@@ -57,6 +59,7 @@ function toDomain(tenantId: string, row?: Row): TenantPolicy {
     billingMode:         (row.billingMode ?? 'advance') as BillingMode,
     graceDays:           row.graceDays,
     maxDebtMinor:        row.maxDebtMinor ?? 10_000_000n,
+    allowMultipleSubscriptions: row.allowMultipleSubscriptions ?? false,
     updatedAt:           row.updatedAt,
   };
 }
@@ -81,6 +84,7 @@ export class DrizzleTenantPolicyRepo implements TenantPolicyRepo {
         billingMode:         policy.billingMode,
         graceDays:           policy.graceDays,
         maxDebtMinor:        policy.maxDebtMinor,
+        allowMultipleSubscriptions: policy.allowMultipleSubscriptions,
         updatedAt:           policy.updatedAt,
       })
       .onConflictDoUpdate({
@@ -94,6 +98,7 @@ export class DrizzleTenantPolicyRepo implements TenantPolicyRepo {
           billingMode:         policy.billingMode,
           graceDays:           policy.graceDays,
           maxDebtMinor:        policy.maxDebtMinor,
+          allowMultipleSubscriptions: policy.allowMultipleSubscriptions,
           updatedAt:           policy.updatedAt,
         },
       });

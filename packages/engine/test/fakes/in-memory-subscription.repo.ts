@@ -61,6 +61,12 @@ export class InMemorySubscriptionRepo implements SubscriptionRepo {
     );
   }
 
+  async findByCustomer(tenantId: string, customerId: string): Promise<Subscription[]> {
+    return [...this.store.values()].filter(
+      (s) => s.tenantId === tenantId && s.customerId === customerId,
+    );
+  }
+
   async update(subscription: Subscription, _tx: TxContext): Promise<void> {
     this.store.set(subscription.id, subscription);
   }

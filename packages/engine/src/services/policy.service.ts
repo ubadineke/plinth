@@ -17,6 +17,7 @@ export const PRESETS: Record<PresetId, PresetKnobs> = {
     billingMode:         'advance',
     graceDays:           7,
     maxDebtMinor:        10_000_000n,
+    allowMultipleSubscriptions: false,
   },
   lenient: {
     upgradeStrategy:     'at_period_end',
@@ -27,6 +28,7 @@ export const PRESETS: Record<PresetId, PresetKnobs> = {
     billingMode:         'advance',
     graceDays:           14,
     maxDebtMinor:        20_000_000n,
+    allowMultipleSubscriptions: false,
   },
   strict: {
     upgradeStrategy:     'immediate_prorated',
@@ -37,6 +39,7 @@ export const PRESETS: Record<PresetId, PresetKnobs> = {
     billingMode:         'advance',
     graceDays:           3,
     maxDebtMinor:        5_000_000n,
+    allowMultipleSubscriptions: false,
   },
   transfer_first: {
     upgradeStrategy:     'at_period_end',
@@ -47,6 +50,7 @@ export const PRESETS: Record<PresetId, PresetKnobs> = {
     billingMode:         'advance',
     graceDays:           21,
     maxDebtMinor:        20_000_000n,
+    allowMultipleSubscriptions: false,
   },
   postpaid: {
     upgradeStrategy:     'immediate_prorated',
@@ -57,6 +61,7 @@ export const PRESETS: Record<PresetId, PresetKnobs> = {
     billingMode:         'arrears',
     graceDays:           7,
     maxDebtMinor:        10_000_000n,
+    allowMultipleSubscriptions: false,
   },
 };
 

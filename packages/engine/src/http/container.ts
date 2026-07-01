@@ -19,6 +19,7 @@ import { DrizzleInvoiceRepo, type InvoiceRepo } from '../db/invoice.repo.js';
 import { DrizzleEventRepo } from '../db/event.repo.js';
 import { DrizzleTenantPolicyRepo } from '../db/policy.repo.js';
 import { DrizzleScheduledChangeRepo } from '../db/scheduled-change.repo.js';
+import type { ScheduledChangeRepo } from '../db/scheduled-change.repo.js';
 import { DrizzleVirtualAccountRepo } from '../db/virtual-account.repo.js';
 import { DrizzleInboundTransferRepo } from '../db/inbound-transfer.repo.js';
 import { DrizzleSuspenseRepo } from '../db/suspense.repo.js';
@@ -33,6 +34,7 @@ import { FinalizeInvoiceService } from '../services/invoice.service.js';
 import { RelayOutboxService } from '../services/outbox.service.js';
 import { ChargeCardService, TickService } from '../services/billing.service.js';
 import { PlanChangeService } from '../services/plan-change.service.js';
+import { SubscriptionLifecycleService } from '../services/subscription-lifecycle.service.js';
 import { ProvisionVirtualAccountService } from '../services/virtual-account.service.js';
 import { TransferReconService } from '../services/transfer-recon.service.js';
 import { EntitlementsService } from '../services/entitlements.service.js';
@@ -67,9 +69,11 @@ export interface Container {
   relayOutboxService: RelayOutboxService;
   tickService: TickService;
   planChangeService: PlanChangeService;
+  subscriptionLifecycleService: SubscriptionLifecycleService;
   provisionVaService: ProvisionVirtualAccountService;
   reconService: TransferReconService;
   subscriptionRepo: SubscriptionRepo;
+  scheduledChangeRepo: ScheduledChangeRepo;
   planGroupRepo: PlanGroupRepo;
   planRepo: PlanRepo;
   invoiceRepo: InvoiceRepo;
@@ -141,6 +145,9 @@ export function buildContainer(): Container {
     subscriptionRepo, planRepo, invoiceRepo, eventRepo,
     scheduledChangeRepo, policyRepo, chargeCardService, postLedgerEntryService, uow, clock,
   );
+  const subscriptionLifecycleService = new SubscriptionLifecycleService(
+    subscriptionRepo, policyRepo, scheduledChangeRepo, eventRepo, uow, clock,
+  );
   const provisionVaService = new ProvisionVirtualAccountService(nomba, virtualAccountRepo, customerRepo, clock);
   const reconService = new TransferReconService(
     virtualAccountRepo, inboundTransferRepo, suspenseRepo, invoiceRepo,
@@ -185,9 +192,11 @@ export function buildContainer(): Container {
     relayOutboxService, 
     tickService,
     planChangeService,
+    subscriptionLifecycleService,
     provisionVaService,
     reconService,
     subscriptionRepo,
+    scheduledChangeRepo,
     planGroupRepo,
     planRepo,
     invoiceRepo,

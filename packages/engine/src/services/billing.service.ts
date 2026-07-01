@@ -16,6 +16,9 @@ import { addInterval } from '../domain/period.js';
 import { assertTransition } from '../domain/state-machines/subscription.js';
 import type { Kobo } from '../domain/money.js';
 
+// States a checkout payment can recover back to active (the dunning ladder).
+const DUNNING_RECOVERABLE = ['past_due', 'grace', 'delinquent'];
+
 export interface ChargeCardInput {
   tokenKey: string;
   amountMinor: Kobo;
@@ -314,6 +317,52 @@ export class TickService {
     return handled;
   }
 
+  // Recover a subscription stuck in dunning (past_due/grace/delinquent) after the customer pays the
+  // outstanding invoice via checkout ("Update payment"). Settles the open invoice and returns the sub
+  // to active. Card tokens are captured separately (handleTokenized); a transfer recovery leaves no
+  // token, so the next renewal will dun again — inherent to transfer (no auto-charge).
+  async recoverFromPayment(tenantId: string, subscriptionId: string): Promise<boolean> {
+    const now = this.clock.now();
+    const sub = await this.subscriptionRepo.findById(tenantId, subscriptionId);
+    if (!sub || !DUNNING_RECOVERABLE.includes(sub.state)) return false;
+
+    const invoice = await this.invoiceRepo.findOldestOpen(tenantId, sub.customerId);
+
+    await this.uow.run(async (tx) => {
+      const locked = await this.subscriptionRepo.findForUpdate(tenantId, sub.id, tx);
+      if (!locked || !DUNNING_RECOVERABLE.includes(locked.state)) return;
+
+      if (invoice) {
+        await this.invoiceRepo.update({ ...invoice, state: 'paid', amountPaidMinor: invoice.amountDueMinor, closedAt: now, updatedAt: now }, tx);
+        await this.postLedgerEntry.executeInTx({
+          tenantId, customerId: sub.customerId, type: 'payment_received',
+          amountMinor: invoice.amountDueMinor, invoiceId: invoice.id,
+          description: `Dunning recovery (checkout) for ${sub.id}`,
+        }, tx);
+      }
+
+      // Clear dunning bookkeeping so a recovered sub starts clean.
+      const meta = { ...locked.metadata };
+      delete (meta as Record<string, unknown>)['dunningNextRetryAt'];
+      delete (meta as Record<string, unknown>)['enteredGraceAt'];
+
+      // The settled invoice is for the new period — advance the sub into it so it renews next at
+      // that period's end, not immediately (the old period already lapsed while dunning).
+      const period = invoice
+        ? { currentPeriodStart: invoice.periodStart, currentPeriodEnd: invoice.periodEnd, nextBillAt: invoice.periodEnd }
+        : {};
+
+      await this.subscriptionRepo.update({ ...locked, ...period, state: 'active', metadata: meta, updatedAt: now }, tx);
+      await this.eventRepo.append({
+        id: `evt_${ulid()}`, tenantId, type: 'subscription.recovered',
+        resourceType: 'subscription', resourceId: sub.id,
+        payload: { subscriptionId: sub.id, invoiceId: invoice?.id ?? null, via: 'checkout_payment' },
+        occurredAt: now, createdAt: now,
+      }, tx);
+    });
+    return true;
+  }
+
   // Records a paid first-period invoice for a checkout payment that already happened.
   // When `activate` is true the subscription transitions incomplete → active and its period
   // is re-anchored to now; otherwise the (already-active) subscription is left as-is.
@@ -382,6 +431,23 @@ export class TickService {
   }
 
   private async renewOne(sub: Subscription, now: Date): Promise<boolean> {
+    // Honor an end_of_period cancel: the period is up, so end the subscription instead of renewing.
+    if (sub.cancelAtPeriodEnd) {
+      await this.uow.run(async (tx) => {
+        const locked = await this.subscriptionRepo.findForUpdate(sub.tenantId, sub.id, tx);
+        if (!locked || locked.state === 'canceled') return;
+        await this.subscriptionRepo.update({ ...locked, state: 'canceled', canceledAt: now, updatedAt: now }, tx);
+        await this.scheduledChangeRepo.deleteBySubscription(sub.tenantId, sub.id, tx);
+        await this.eventRepo.append({
+          id: `evt_${ulid()}`, tenantId: sub.tenantId, type: 'subscription.canceled',
+          resourceType: 'subscription', resourceId: sub.id,
+          payload: { subscriptionId: sub.id, reason: 'cancel_at_period_end' },
+          occurredAt: now, createdAt: now,
+        }, tx);
+      });
+      return false;
+    }
+
     // Apply any pending scheduled change at renewal
     const scheduledChange = await this.scheduledChangeRepo.findBySubscription(sub.tenantId, sub.id);
     const effectivePlanId = scheduledChange?.newPlanId ?? sub.planId;

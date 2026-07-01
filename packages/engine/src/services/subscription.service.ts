@@ -6,7 +6,7 @@ import type { PlanRepo } from '../db/catalog.repo.js';
 import type { SubscriptionRepo, Subscription, SubscriptionState } from '../db/subscription.repo.js';
 import type { EventRepo, OutboxEvent } from '../db/event.repo.js';
 import type { TenantPolicyRepo } from '../db/policy.repo.js';
-import { NotFoundError, PlanInactiveError } from '../domain/errors.js';
+import { NotFoundError, PlanInactiveError, ConflictError } from '../domain/errors.js';
 import { addInterval, addDays } from '../domain/period.js';
 
 export interface CreateSubscriptionInput {
@@ -52,9 +52,31 @@ export class CreateSubscriptionService {
     if (!plan) throw new NotFoundError('Plan', input.planId);
     if (!plan.active) throw new PlanInactiveError(input.planId);
 
+    const policy = await this.policyRepo.findByTenantId(input.tenantId);
+
+    // Guard: one live subscription per customer per plan-group (unless the tenant opts into multiples).
+    // Gives integrators a guarantee they can rely on ("a customer is subscribed, or not") instead of
+    // writing their own de-duplication. Returns 409 with the existing sub id so they can reuse it.
+    if (!policy.allowMultipleSubscriptions) {
+      const live = (await this.subscriptionRepo.findByCustomer(input.tenantId, input.customerId))
+        .filter((s) => s.state !== 'canceled');
+      if (live.length > 0) {
+        const groups = await Promise.all(live.map(async (s) => ({
+          sub: s, groupId: (await this.planRepo.findById(input.tenantId, s.planId))?.planGroupId,
+        })));
+        const clash = groups.find((g) => g.groupId === plan.planGroupId);
+        if (clash) {
+          throw new ConflictError(
+            'customer_already_subscribed',
+            `Customer already has a live subscription (${clash.sub.id}) in this plan group. Change or cancel it, or enable allow_multiple_subscriptions.`,
+            clash.sub.id,
+          );
+        }
+      }
+    }
+
     const subId = `sub_${ulid()}`;
     const hasTrial = plan.trialPeriodDays > 0;
-    const policy = await this.policyRepo.findByTenantId(input.tenantId);
     const billingMode = input.billingMode ?? policy.billingMode;
 
     const strict = policy.activationStrategy === 'charge_to_activate';
@@ -106,6 +128,7 @@ export class CreateSubscriptionService {
       trialEndAt,
       pausedAt:               null,
       canceledAt:             null,
+      cancelAtPeriodEnd:      false,
       metadata:               input.metadata ?? {},
       createdAt:              now,
       updatedAt:              now,

@@ -9,6 +9,7 @@ import {
   DomainError,
   IdempotencyConflictError,
   NotFoundError,
+  ConflictError,
   UnauthorizedError,
   CardError,
 } from '../domain/errors.js';
@@ -45,6 +46,9 @@ export const errorMiddleware: ErrorHandler = (err, c) => {
   }
   if (err instanceof NotFoundError) {
     return c.json({ error: { type: err.type, code: err.code, message: err.message } }, 404);
+  }
+  if (err instanceof ConflictError) {
+    return c.json({ error: { type: err.type, code: err.code, message: err.message, existing_id: err.existingId } }, 409);
   }
   if (err instanceof CardError) {
     return c.json(

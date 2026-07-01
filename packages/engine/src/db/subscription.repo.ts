@@ -22,6 +22,7 @@ export interface Subscription {
   trialEndAt: Date | null;
   pausedAt: Date | null;
   canceledAt: Date | null;
+  cancelAtPeriodEnd: boolean;
   metadata: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
@@ -34,6 +35,7 @@ export interface SubscriptionRepo {
   findDueForBilling(tenantId: string, asOf: Date, tx?: TxContext): Promise<Subscription[]>;
   findTrialsEnding(tenantId: string, asOf: Date, tx?: TxContext): Promise<Subscription[]>;
   findByState(tenantId: string, state: SubscriptionState): Promise<Subscription[]>;
+  findByCustomer(tenantId: string, customerId: string, tx?: TxContext): Promise<Subscription[]>;
   countByPlan(tenantId: string, planId: string): Promise<number>;
   create(subscription: Subscription, tx?: TxContext): Promise<void>;
   updateState(tenantId: string, id: string, state: SubscriptionState, updatedAt: Date, tx: TxContext): Promise<void>;
@@ -59,6 +61,7 @@ function toDomain(row: Row): Subscription {
     trialEndAt:             row.trialEndAt ?? null,
     pausedAt:               row.pausedAt ?? null,
     canceledAt:             row.canceledAt ?? null,
+    cancelAtPeriodEnd:      row.cancelAtPeriodEnd ?? false,
     metadata:               (row.metadata as Record<string, unknown>) ?? {},
     createdAt:              row.createdAt,
     updatedAt:              row.updatedAt,
@@ -138,6 +141,15 @@ export class DrizzleSubscriptionRepo implements SubscriptionRepo {
     return rows.map(toDomain);
   }
 
+  async findByCustomer(tenantId: string, customerId: string, tx?: TxContext): Promise<Subscription[]> {
+    const client = getClient(tx);
+    const rows = await client
+      .select()
+      .from(subscriptions)
+      .where(and(eq(subscriptions.tenantId, tenantId), eq(subscriptions.customerId, customerId)));
+    return rows.map(toDomain);
+  }
+
   async countByPlan(tenantId: string, planId: string): Promise<number> {
     const rows = await db
       .select({ id: subscriptions.id })
@@ -164,6 +176,7 @@ export class DrizzleSubscriptionRepo implements SubscriptionRepo {
       trialEndAt:             subscription.trialEndAt,
       pausedAt:               subscription.pausedAt,
       canceledAt:             subscription.canceledAt,
+      cancelAtPeriodEnd:      subscription.cancelAtPeriodEnd,
       metadata:               subscription.metadata,
       createdAt:              subscription.createdAt,
       updatedAt:              subscription.updatedAt,
@@ -195,6 +208,7 @@ export class DrizzleSubscriptionRepo implements SubscriptionRepo {
         trialEndAt:             subscription.trialEndAt,
         pausedAt:               subscription.pausedAt,
         canceledAt:             subscription.canceledAt,
+        cancelAtPeriodEnd:      subscription.cancelAtPeriodEnd,
         metadata:               subscription.metadata,
         updatedAt:              subscription.updatedAt,
       })

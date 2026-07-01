@@ -106,12 +106,15 @@ export function makeWebhookRouter(
 
         const linked = await cardTokenService.resolveFromOrderRef(tx.orderReference);
         if (linked) {
-          // A checkout can settle for one of two reasons: (1) it funds a pending plan change
-          // (no-card upgrade) → swap the plan, or (2) it's the first payment on an incomplete
-          // subscription → activate it. applyPaidChange returns false when there's no pending
-          // change, so we fall through to activation. Both are idempotent for duplicate deliveries.
+          // A checkout can settle for three reasons, tried in order (each idempotent, so a duplicate
+          // delivery is harmless): (1) funds a pending plan change (no-card upgrade) → swap the plan;
+          // (2) pays the outstanding invoice on a dunning sub ("Update payment") → recover to active;
+          // (3) first payment on an incomplete subscription → activate it.
           const applied = await planChangeService.applyPaidChange({ tenantId: linked.tenantId, subscriptionId: linked.subscriptionId });
-          if (!applied) await tickService.activateFromPayment(linked.tenantId, linked.customerId);
+          if (!applied) {
+            const recovered = await tickService.recoverFromPayment(linked.tenantId, linked.subscriptionId);
+            if (!recovered) await tickService.activateFromPayment(linked.tenantId, linked.customerId);
+          }
         }
       } else {
         console.log('[webhook:nomba] order not settled per Nomba lookup — skipping', tx.orderReference, verified.status);

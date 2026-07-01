@@ -29,6 +29,17 @@ export class InvalidRequestError extends DomainError {
   }
 }
 
+// 409 — a conflicting resource already exists (e.g. the customer already has a live subscription).
+// Carries the conflicting resource id so integrators can reuse it instead of retrying.
+export class ConflictError extends DomainError {
+  readonly existingId?: string | undefined;
+  constructor(code: string, message: string, existingId?: string) {
+    super('invalid_request_error', code, message);
+    this.name = 'ConflictError';
+    this.existingId = existingId;
+  }
+}
+
 export class IdempotencyConflictError extends DomainError {
   constructor(message = 'Idempotency-Key reused with a different request body') {
     super('idempotency_error', 'idempotency_conflict', message);

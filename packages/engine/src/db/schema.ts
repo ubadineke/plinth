@@ -208,6 +208,8 @@ export const subscriptions = pgTable(
     trialEndAt:             timestamp('trial_end_at', { withTimezone: true }),
     pausedAt:               timestamp('paused_at', { withTimezone: true }),
     canceledAt:             timestamp('canceled_at', { withTimezone: true }),
+    // end_of_period cancel: stays active (keeps access) but won't renew — the tick cancels it at period end.
+    cancelAtPeriodEnd:      boolean('cancel_at_period_end').notNull().default(false),
     metadata:               json('metadata').notNull().default({}).$type<Record<string, unknown>>(),
     createdAt:              timestamp('created_at', { withTimezone: true }).notNull(),
     updatedAt:              timestamp('updated_at', { withTimezone: true }).notNull(),
@@ -275,6 +277,8 @@ export const tenantPolicies = pgTable('tenant_policies', {
   billingMode:         text('billing_mode').notNull().default('advance').$type<'advance' | 'arrears'>(),
   graceDays:           integer('grace_days').notNull().default(7),
   maxDebtMinor:        bigint('max_debt_minor', { mode: 'bigint' }).notNull().default(sql`10000000`),
+  // false (default) → one live subscription per customer per plan-group. true → allow concurrent subs.
+  allowMultipleSubscriptions: boolean('allow_multiple_subscriptions').notNull().default(false),
   updatedAt:           timestamp('updated_at', { withTimezone: true }).notNull(),
 });
 

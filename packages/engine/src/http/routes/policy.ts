@@ -16,6 +16,7 @@ const UpdateSchema = z.object({
   activationStrategy:    z.enum(['activate_then_charge', 'charge_to_activate']).optional(),
   billingMode:         z.enum(['advance', 'arrears']).optional(),
   graceDays:           z.number().int().min(0).max(90).optional(),
+  allowMultipleSubscriptions: z.boolean().optional(),
 });
 
 function serialize(p: TenantPolicy) {
@@ -29,6 +30,7 @@ function serialize(p: TenantPolicy) {
     billing_mode:          p.billingMode,
     grace_days:            p.graceDays,
     max_debt_minor:        p.maxDebtMinor.toString(),
+    allow_multiple_subscriptions: p.allowMultipleSubscriptions,
     updated_at:            p.updatedAt.toISOString(),
   };
 }

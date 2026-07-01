@@ -5,6 +5,8 @@ import type { CreateSubscriptionService } from '../../services/subscription.serv
 import type { PlanChangeService } from '../../services/plan-change.service.js';
 import type { EntitlementsService } from '../../services/entitlements.service.js';
 import type { SubscriptionRepo } from '../../db/subscription.repo.js';
+import type { ScheduledChangeRepo, ScheduledChange } from '../../db/scheduled-change.repo.js';
+import type { SubscriptionLifecycleService } from '../../services/subscription-lifecycle.service.js';
 
 const CreateSubscriptionSchema = z.object({
   customer_id:               z.string().min(1),
@@ -30,29 +32,43 @@ export function makeSubscriptionsRouter(
   planChangeService: PlanChangeService,
   entitlementsService: EntitlementsService,
   subscriptionRepo: SubscriptionRepo,
+  scheduledChangeRepo: ScheduledChangeRepo,
+  lifecycleService: SubscriptionLifecycleService,
 ): Hono {
   const router = new Hono();
+
+  // Serialize a pending period-end change (e.g. a scheduled downgrade) so clients can surface
+  // "switching to X on <date>". Payment-triggered changes are excluded (findBySubscription filters them).
+  const serializeScheduledChange = (sc: ScheduledChange | null) =>
+    sc ? {
+      id:           sc.id,
+      new_plan_id:  sc.newPlanId,
+      new_quantity: sc.newQuantity,
+      scheduled_for: sc.scheduledFor?.toISOString() ?? null,
+    } : null;
 
   router.get('/', async (c) => {
     const tenantId = c.get('tenantId');
     const list = await subscriptionRepo.findAll(tenantId);
-    return c.json({
-      object: 'list',
-      data: list.map((s) => ({
-        object:               'subscription',
-        id:                   s.id,
-        customer_id:          s.customerId,
-        plan_id:              s.planId,
-        state:                s.state,
-        quantity:             s.quantity,
-        preferred_rail:       s.preferredRail,
-        current_period_start: s.currentPeriodStart.toISOString(),
-        current_period_end:   s.currentPeriodEnd.toISOString(),
-        next_bill_at:         s.nextBillAt.toISOString(),
-        trial_end_at:         s.trialEndAt?.toISOString() ?? null,
-        created_at:           s.createdAt.toISOString(),
-      })),
-    });
+    const data = await Promise.all(list.map(async (s) => ({
+      object:               'subscription',
+      id:                   s.id,
+      customer_id:          s.customerId,
+      plan_id:              s.planId,
+      state:                s.state,
+      quantity:             s.quantity,
+      preferred_rail:       s.preferredRail,
+      current_period_start: s.currentPeriodStart.toISOString(),
+      current_period_end:   s.currentPeriodEnd.toISOString(),
+      next_bill_at:         s.nextBillAt.toISOString(),
+      trial_end_at:         s.trialEndAt?.toISOString() ?? null,
+      cancel_at_period_end: s.cancelAtPeriodEnd,
+      canceled_at:          s.canceledAt?.toISOString() ?? null,
+      has_card:             s.defaultPaymentMethodId != null,
+      created_at:           s.createdAt.toISOString(),
+      scheduled_change:     serializeScheduledChange(await scheduledChangeRepo.findBySubscription(tenantId, s.id)),
+    })));
+    return c.json({ object: 'list', data });
   });
 
   router.get('/:id', async (c) => {
@@ -72,7 +88,10 @@ export function makeSubscriptionsRouter(
       current_period_end:   s.currentPeriodEnd.toISOString(),
       next_bill_at:         s.nextBillAt.toISOString(),
       trial_end_at:         s.trialEndAt?.toISOString() ?? null,
+      cancel_at_period_end: s.cancelAtPeriodEnd,
+      canceled_at:          s.canceledAt?.toISOString() ?? null,
       created_at:           s.createdAt.toISOString(),
+      scheduled_change:     serializeScheduledChange(await scheduledChangeRepo.findBySubscription(tenantId, s.id)),
     });
   });
 
@@ -147,6 +166,20 @@ export function makeSubscriptionsRouter(
     const { id, changeId } = c.req.param();
     await planChangeService.cancelScheduledChange({ tenantId, subscriptionId: id, changeId });
     return c.json({ object: 'scheduled_change', id: changeId, canceled: true });
+  });
+
+  // Cancel a subscription, honoring the tenant's cancel_policy (immediate vs end_of_period).
+  router.post('/:id/cancel', async (c) => {
+    const tenantId = c.get('tenantId');
+    const result = await lifecycleService.cancel({ tenantId, subscriptionId: c.req.param('id') });
+    return c.json({ object: 'subscription', ...result });
+  });
+
+  // Undo a still-pending end_of_period cancel (keep the subscription).
+  router.post('/:id/reactivate', async (c) => {
+    const tenantId = c.get('tenantId');
+    const result = await lifecycleService.reactivate({ tenantId, subscriptionId: c.req.param('id') });
+    return c.json({ object: 'subscription', ...result });
   });
 
   return router;
