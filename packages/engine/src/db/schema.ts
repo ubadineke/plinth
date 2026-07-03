@@ -313,6 +313,8 @@ export const tenantPolicies = pgTable('tenant_policies', {
   activationStrategy:  text('activation_strategy').notNull().default('activate_then_charge'),
   billingMode:         text('billing_mode').notNull().default('advance').$type<'advance' | 'arrears'>(),
   graceDays:           integer('grace_days').notNull().default(7),
+  // Days a subscription may stay delinquent before the tick cancels it (→ regular free user).
+  delinquentCancelDays: integer('delinquent_cancel_days').notNull().default(30),
   maxDebtMinor:        bigint('max_debt_minor', { mode: 'bigint' }).notNull().default(sql`10000000`),
   // false (default) → one live subscription per customer per plan-group. true → allow concurrent subs.
   allowMultipleSubscriptions: boolean('allow_multiple_subscriptions').notNull().default(false),

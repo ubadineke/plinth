@@ -28,6 +28,9 @@ export class TransferReconService {
     private readonly postLedgerEntry: PostLedgerEntryService,
     private readonly uow:             UnitOfWork,
     private readonly clock:           Clock,
+    // Activates a pending (incomplete) subscription on first payment — reuses the checkout activation
+    // path (records the first-period paid invoice + flips to active). Returns how many it activated.
+    private readonly activatePending: (tenantId: string, customerId: string) => Promise<number> = async () => 0,
   ) {}
 
   async handleTransfer(transfer: IncomingTransfer): Promise<{ outcome: string }> {
@@ -60,6 +63,20 @@ export class TransferReconService {
     // Find oldest payable invoice (open or partially_paid)
     const invoice = await this.invoiceRepo.findOldestPayable(tenantId, customerId);
     if (!invoice) {
+      // No open invoice. If the customer has a pending (incomplete) subscription, this transfer is its
+      // first payment → activate it (records the first-period paid invoice). Otherwise it's a genuine
+      // advance/overpayment → credit the customer's balance.
+      const activated = await this.activatePending(tenantId, customerId);
+      if (activated > 0) {
+        await this.inboundRepo.create({
+          id: `ite_${ulid()}`, nombaRequestId, accountRef, amountMinor,
+          narration: transfer.narration, sessionId: transfer.sessionId,
+          tenantId, customerId, invoiceId: null,
+          outcome: 'paid', createdAt: now,
+        });
+        return { outcome: 'paid' };
+      }
+
       // No open invoice — credit to customer balance as advance payment
       await this.uow.run(async (tx) => {
         await this.postLedgerEntry.executeInTx({

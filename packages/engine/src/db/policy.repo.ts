@@ -23,6 +23,7 @@ export interface TenantPolicy {
   activationStrategy: ActivationStrategy;
   billingMode: BillingMode;
   graceDays: number;
+  delinquentCancelDays: number;
   maxDebtMinor: bigint;
   allowMultipleSubscriptions: boolean;
   updatedAt: Date;
@@ -36,6 +37,7 @@ const DEFAULTS = {
   activationStrategy:  'activate_then_charge' as ActivationStrategy,
   billingMode:         'advance' as BillingMode,
   graceDays:           7,
+  delinquentCancelDays: 30,
   maxDebtMinor:        10_000_000n,
   allowMultipleSubscriptions: false,
 };
@@ -58,6 +60,7 @@ function toDomain(tenantId: string, row?: Row): TenantPolicy {
     activationStrategy:    (row.activationStrategy ?? 'activate_then_charge') as ActivationStrategy,
     billingMode:         (row.billingMode ?? 'advance') as BillingMode,
     graceDays:           row.graceDays,
+    delinquentCancelDays: row.delinquentCancelDays ?? 30,
     maxDebtMinor:        row.maxDebtMinor ?? 10_000_000n,
     allowMultipleSubscriptions: row.allowMultipleSubscriptions ?? false,
     updatedAt:           row.updatedAt,
@@ -83,6 +86,7 @@ export class DrizzleTenantPolicyRepo implements TenantPolicyRepo {
         activationStrategy:    policy.activationStrategy,
         billingMode:         policy.billingMode,
         graceDays:           policy.graceDays,
+        delinquentCancelDays: policy.delinquentCancelDays,
         maxDebtMinor:        policy.maxDebtMinor,
         allowMultipleSubscriptions: policy.allowMultipleSubscriptions,
         updatedAt:           policy.updatedAt,
@@ -97,6 +101,7 @@ export class DrizzleTenantPolicyRepo implements TenantPolicyRepo {
           activationStrategy:  policy.activationStrategy,
           billingMode:         policy.billingMode,
           graceDays:           policy.graceDays,
+          delinquentCancelDays: policy.delinquentCancelDays,
           maxDebtMinor:        policy.maxDebtMinor,
           allowMultipleSubscriptions: policy.allowMultipleSubscriptions,
           updatedAt:           policy.updatedAt,

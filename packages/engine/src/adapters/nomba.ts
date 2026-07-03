@@ -5,6 +5,9 @@ export interface CreateVirtualAccountParams {
   accountRef: string;
   accountName: string;
   tenantId: string;
+  // When set, the VA is created UNDER this sub-account (path segment) so credits + webhooks route to
+  // it, not the parent. Omit → VA lives under the parent.
+  subAccountId?: string;
 }
 
 export interface CreateVirtualAccountResult {
@@ -247,11 +250,23 @@ export class HttpNombaAdapter implements NombaAdapter {
   async createVirtualAccount(params: CreateVirtualAccountParams): Promise<CreateVirtualAccountResult> {
     const token = await this.getToken();
 
-    const res = await fetch(`${this.config.baseUrl}/v1/accounts/virtual`, {
+    // Append the sub-account id as a path segment to bind the VA to that sub-account (credits +
+    // webhooks route there). Without it, the VA lands under the parent. The accountId HEADER stays
+    // the parent regardless (Nomba's rule). Verified against prod: /virtual/{sub} → holder = sub.
+    const path = params.subAccountId
+      ? `/v1/accounts/virtual/${params.subAccountId}`
+      : `/v1/accounts/virtual`;
+
+    // Nomba rejects special characters in the VA account name (and wants 8–64 chars). Strip anything
+    // that isn't a letter/number/space, collapse whitespace, and pad a too-short name.
+    const cleanName = (params.accountName.replace(/[^a-zA-Z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim() || 'Customer')
+      .padEnd(8, ' ').slice(0, 64).trim().padEnd(8, 'x');
+
+    const res = await fetch(`${this.config.baseUrl}${path}`, {
       method:  'POST',
       headers: this.authHeaders(token),
       body:    JSON.stringify({
-        accountName: params.accountName,
+        accountName: cleanName,
         accountRef:  params.accountRef,
         currency:    'NGN',
       }),

@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { db } from './client.js';
 import { cardTokens } from './schema.js';
 
@@ -29,5 +29,10 @@ export class DrizzleCardTokenRepo {
       .where(eq(cardTokens.customerId, customerId))
       .limit(1);
     return rows[0] ?? null;
+  }
+
+  async deleteByCustomer(tenantId: string, customerId: string): Promise<void> {
+    await db.delete(cardTokens)
+      .where(and(eq(cardTokens.tenantId, tenantId), eq(cardTokens.customerId, customerId)));
   }
 }

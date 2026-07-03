@@ -80,11 +80,15 @@ export function makeTickRouter(tickService: TickService, tenantRepo: TenantRepo,
     ]);
 
     return c.json({
-      object:           'tick_result',
-      renewed:          result.renewed,
-      trials_converted: result.trialsConverted,
-      failed:           result.failed,
-      sandboxes_purged: purged,
+      object:              'tick_result',
+      renewed:             result.renewed,
+      trials_converted:    result.trialsConverted,
+      failed:              result.failed,
+      dunning_retried:     result.dunningRetried,
+      dunning_recovered:   result.dunningRecovered,
+      grace_expired:       result.graceExpired,
+      delinquent_canceled: result.delinquentCanceled,
+      sandboxes_purged:    purged,
     });
   });
 

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { CreateCustomerService } from '../../services/customer.service.js';
 import type { ProvisionVirtualAccountService } from '../../services/virtual-account.service.js';
 import type { EntitlementsService } from '../../services/entitlements.service.js';
+import type { CardTokenizationService } from '../../services/card-token.service.js';
 import type { CustomerRepo } from '../../db/customer.repo.js';
 
 const CreateCustomerSchema = z.object({
@@ -18,6 +19,7 @@ export function makeCustomersRouter(
   provisionVaService: ProvisionVirtualAccountService,
   entitlementsService: EntitlementsService,
   customerRepo: CustomerRepo,
+  cardTokenService: CardTokenizationService,
 ): Hono {
   const router = new Hono();
 
@@ -116,6 +118,14 @@ export function makeCustomersRouter(
     const va = await provisionVaService.findExisting(tenantId, c.req.param('id'));
     if (!va) return c.json({ error: 'no_virtual_account' }, 404);
     return c.json(serializeVa(va));
+  });
+
+  // Revoke a saved card — the customer's off-switch. Deletes the stored token and clears it off
+  // every subscription so the engine can never charge the card again.
+  router.delete('/:id/payment-method', async (c) => {
+    const tenantId = c.get('tenantId');
+    const result = await cardTokenService.revoke(tenantId, c.req.param('id'));
+    return c.json({ object: 'payment_method', customer_id: c.req.param('id'), revoked: result.removed });
   });
 
   return router;

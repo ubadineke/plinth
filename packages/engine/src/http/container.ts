@@ -157,11 +157,12 @@ export function buildContainer(): Container {
   const subscriptionLifecycleService = new SubscriptionLifecycleService(
     subscriptionRepo, policyRepo, scheduledChangeRepo, eventRepo, uow, clock,
   );
-  const provisionVaService = new ProvisionVirtualAccountService(nomba, virtualAccountRepo, customerRepo, clock);
+  const provisionVaService = new ProvisionVirtualAccountService(nomba, virtualAccountRepo, customerRepo, clock, env.NOMBA_SUB_ACCOUNT_ID);
   const transferPaymentService = new TransferPaymentService(subscriptionRepo, planRepo, invoiceRepo, provisionVaService);
   const reconService = new TransferReconService(
     virtualAccountRepo, inboundTransferRepo, suspenseRepo, invoiceRepo,
     eventRepo, postLedgerEntryService, uow, clock,
+    (t, cust) => tickService.activateFromPayment(t, cust),
   );
 
   const sandboxService = new SandboxService(

@@ -68,6 +68,7 @@ export interface TickResult {
   dunningRetried: number;
   dunningRecovered: number;
   graceExpired: number;
+  delinquentCanceled: number;
 }
 
 export class TickService {
@@ -114,6 +115,7 @@ export class TickService {
 
     const dunningResult = await this.tickDunning(tenantId, now);
     const graceResult = await this.tickGrace(tenantId, now);
+    const delinquentResult = await this.tickDelinquent(tenantId, now);
 
     return {
       renewed,
@@ -122,6 +124,7 @@ export class TickService {
       dunningRetried: dunningResult.retried,
       dunningRecovered: dunningResult.recovered,
       graceExpired: graceResult.expired,
+      delinquentCanceled: delinquentResult.canceled,
     };
   }
 
@@ -856,7 +859,11 @@ export class TickService {
           await this.uow.run(async (tx) => {
             const locked = await this.subscriptionRepo.findForUpdate(sub.tenantId, sub.id, tx);
             if (!locked || locked.state !== 'grace') return;
-            await this.subscriptionRepo.update({ ...locked, state: 'delinquent', updatedAt: now }, tx);
+            await this.subscriptionRepo.update({
+              ...locked, state: 'delinquent',
+              metadata: { ...locked.metadata, enteredDelinquentAt: now.toISOString() },
+              updatedAt: now,
+            }, tx);
             await this.eventRepo.append({
               id:           `evt_${ulid()}`,
               tenantId,
@@ -873,5 +880,39 @@ export class TickService {
       }
     }
     return { expired };
+  }
+
+  // After a subscription has been delinquent for delinquent_cancel_days, cancel it — the customer
+  // becomes a regular (free) user instead of sitting "on hold" indefinitely. delinquent_cancel_days=0
+  // disables this (delinquent stays terminal).
+  private async tickDelinquent(tenantId: string, now: Date): Promise<{ canceled: number }> {
+    const policy = await this.policyRepo.findByTenantId(tenantId);
+    const days = policy.delinquentCancelDays;
+    if (!days || days <= 0) return { canceled: 0 };
+
+    const subs = await this.subscriptionRepo.findByState(tenantId, 'delinquent');
+    let canceled = 0;
+
+    for (const sub of subs) {
+      const enteredAt = (sub.metadata['enteredDelinquentAt'] as string | undefined) ?? sub.updatedAt.toISOString();
+      const cancelAt = new Date(new Date(enteredAt).getTime() + days * 86_400_000);
+      if (now < cancelAt) continue;
+      try {
+        await this.uow.run(async (tx) => {
+          const locked = await this.subscriptionRepo.findForUpdate(sub.tenantId, sub.id, tx);
+          if (!locked || locked.state !== 'delinquent') return;
+          await this.subscriptionRepo.update({ ...locked, state: 'canceled', canceledAt: now, updatedAt: now }, tx);
+          await this.scheduledChangeRepo.deleteBySubscription(sub.tenantId, sub.id, tx);
+          await this.eventRepo.append({
+            id: `evt_${ulid()}`, tenantId, type: 'subscription.canceled',
+            resourceType: 'subscription', resourceId: sub.id,
+            payload: { subscriptionId: sub.id, reason: 'delinquent_expired' },
+            occurredAt: now, createdAt: now,
+          }, tx);
+        });
+        canceled++;
+      } catch { /* continue */ }
+    }
+    return { canceled };
   }
 }

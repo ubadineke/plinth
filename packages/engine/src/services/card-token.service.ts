@@ -29,6 +29,22 @@ export class CardTokenizationService {
     return { tenantId: sub.tenantId, customerId: sub.customerId, subscriptionId: sub.id };
   }
 
+  // Revoke a customer's saved card: delete the stored token and clear it off every subscription so
+  // the engine can never charge it again. Returns the removed tokenKey (if any) so the caller can
+  // also delete it at Nomba. This is the customer's off-switch.
+  async revoke(tenantId: string, customerId: string): Promise<{ removed: boolean; tokenKey: string | null }> {
+    const existing = await this.cardTokenRepo.findByCustomerId(customerId);
+    const tokenKey = existing?.tenantId === tenantId ? existing.tokenKey : null;
+
+    await this.cardTokenRepo.deleteByCustomer(tenantId, customerId);
+    await db
+      .update(subscriptions)
+      .set({ defaultPaymentMethodId: null, updatedAt: new Date() })
+      .where(and(eq(subscriptions.tenantId, tenantId), eq(subscriptions.customerId, customerId)));
+
+    return { removed: !!tokenKey, tokenKey };
+  }
+
   async handleTokenized(orderReference: string, tokenKey: string): Promise<{ tenantId: string; customerId: string } | null> {
     const resolved = await this.resolveFromOrderRef(orderReference);
     if (!resolved) return null;

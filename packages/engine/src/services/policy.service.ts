@@ -16,6 +16,8 @@ export const PRESETS: Record<PresetId, PresetKnobs> = {
     activationStrategy:  'activate_then_charge',
     billingMode:         'advance',
     graceDays:           7,
+
+    delinquentCancelDays: 30,
     maxDebtMinor:        10_000_000n,
     allowMultipleSubscriptions: false,
   },
@@ -27,6 +29,8 @@ export const PRESETS: Record<PresetId, PresetKnobs> = {
     activationStrategy:  'activate_then_charge',
     billingMode:         'advance',
     graceDays:           14,
+
+    delinquentCancelDays: 45,
     maxDebtMinor:        20_000_000n,
     allowMultipleSubscriptions: false,
   },
@@ -38,6 +42,8 @@ export const PRESETS: Record<PresetId, PresetKnobs> = {
     activationStrategy:  'charge_to_activate',
     billingMode:         'advance',
     graceDays:           3,
+
+    delinquentCancelDays: 14,
     maxDebtMinor:        5_000_000n,
     allowMultipleSubscriptions: false,
   },
@@ -49,6 +55,8 @@ export const PRESETS: Record<PresetId, PresetKnobs> = {
     activationStrategy:  'activate_then_charge',
     billingMode:         'advance',
     graceDays:           21,
+
+    delinquentCancelDays: 60,
     maxDebtMinor:        20_000_000n,
     allowMultipleSubscriptions: false,
   },
@@ -60,6 +68,8 @@ export const PRESETS: Record<PresetId, PresetKnobs> = {
     activationStrategy:  'activate_then_charge',
     billingMode:         'arrears',
     graceDays:           7,
+
+    delinquentCancelDays: 30,
     maxDebtMinor:        10_000_000n,
     allowMultipleSubscriptions: false,
   },

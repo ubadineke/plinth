@@ -11,6 +11,9 @@ export class ProvisionVirtualAccountService {
     private readonly virtualAccountRepo: VirtualAccountRepo,
     private readonly customerRepo: CustomerRepo,
     private readonly clock: Clock,
+    // The tenant's Nomba sub-account. When set, VAs are created under it so credits + webhooks
+    // route to the tenant, not the shared parent.
+    private readonly subAccountId?: string,
   ) {}
 
   // Return the customer's VA if already provisioned (no Nomba call). Null if none yet.
@@ -33,6 +36,7 @@ export class ProvisionVirtualAccountService {
       accountRef,
       accountName: customer.name,
       tenantId,
+      ...(this.subAccountId ? { subAccountId: this.subAccountId } : {}),
     });
 
     const va: VirtualAccount = {
