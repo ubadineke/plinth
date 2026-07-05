@@ -58,21 +58,21 @@ export default function Problem() {
           <span className="h-1 w-1 rounded-full bg-jade" />
           The problem
         </span>
-        <h2 className="mt-4 max-w-3xl font-sans text-3xl font-semibold leading-[1.05] tracking-tight text-bone md:text-4xl">
+        <h2 className="mt-4 max-w-3xl font-display text-3xl font-semibold leading-[1.05] tracking-tight text-bone md:text-4xl">
           Recurring payments in Nigeria are leaky and manual.
         </h2>
 
-        <div ref={root} className="mt-12 grid gap-6 md:grid-cols-3">
+        <div ref={root} className="mt-12 grid gap-10 md:grid-cols-3 md:gap-6">
           {cards.map((c) => (
             <div key={c.title} data-card>
               {/* minimal dark glass panel */}
               <div className="group relative aspect-square overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.04]">
-                <span className="absolute left-5 top-5 z-10 font-sans text-sm font-medium text-bone/30">
+                <span className="absolute left-5 top-5 z-10 font-mono text-sm font-medium text-bone/30">
                   {c.n}
                 </span>
                 {/* doodle animation — glows on the dark panel */}
                 <div className="absolute inset-0">{c.media}</div>
-                <span className="absolute bottom-5 left-5 z-10 font-sans text-lg font-semibold text-bone">
+                <span className="absolute bottom-5 left-5 z-10 font-display text-lg font-semibold text-bone">
                   {c.title}
                 </span>
               </div>

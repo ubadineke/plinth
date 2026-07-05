@@ -2,6 +2,60 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ---------- Type (The Touchline system) ----------
+   Self-hosted with REAL family names (not next/font's hashed ones) so
+   canvas-drawn text (RoadLogos median caption) can use the same faces.
+   Clash Display — headings · Satoshi — body/UI · JetBrains Mono — numbers */
+@font-face {
+  font-family: "Clash Display";
+  src: url("/fonts/ClashDisplay-Semibold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Clash Display";
+  src: url("/fonts/ClashDisplay-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Satoshi";
+  src: url("/fonts/Satoshi-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Satoshi";
+  src: url("/fonts/Satoshi-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Satoshi";
+  src: url("/fonts/Satoshi-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Satoshi";
+  src: url("/fonts/Satoshi-Black.woff2") format("woff2");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/JetBrainsMono-Variable.woff2") format("woff2");
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   /* where the danfo's wheels sit (the bridge deck line) */
   --hero-deck: 13%;
@@ -224,6 +278,97 @@ html.has-rive-cursor * {
     transform: translateX(14vw);
   }
   .cloud {
+    animation: none;
+  }
+}
+
+/* ---------- Content-section micro-interactions ----------
+   Shared, on-brand hover/motion utilities used across the marketing
+   sections below the hero. Kept curated: ≤8%-ish shadows, jade edge
+   tint, subtle lift — never a generic transition-all bounce. */
+@layer components {
+  /* Card hover: a small rise, a jade edge, and a soft low shadow. */
+  .card-lift {
+    transition:
+      transform 0.35s cubic-bezier(0.22, 0.72, 0.2, 1),
+      border-color 0.35s ease,
+      box-shadow 0.35s ease,
+      background-color 0.35s ease;
+  }
+  .card-lift:hover {
+    transform: translateY(-4px);
+    border-color: rgba(15, 163, 127, 0.35);
+    box-shadow: 0 20px 44px -28px rgba(20, 24, 28, 0.28);
+  }
+
+  /* A jade rule that draws itself in on hover (links, "learn more"). */
+  .rule-draw {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    background-size: 0% 1.5px;
+    transition: background-size 0.4s cubic-bezier(0.22, 0.72, 0.2, 1);
+  }
+  .rule-draw:hover {
+    background-size: 100% 1.5px;
+  }
+}
+
+/* the small arrow inside links/CTAs slides on hover of its group */
+.group:hover .arrow-slide {
+  transform: translateX(4px);
+}
+.arrow-slide {
+  transition: transform 0.3s cubic-bezier(0.22, 0.72, 0.2, 1);
+}
+
+/* FAQ accordion — animate open/close height with the grid-rows trick
+   (0fr → 1fr), so no JS height measurement is needed. */
+.acc-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition:
+    grid-template-rows 0.4s cubic-bezier(0.22, 0.72, 0.2, 1),
+    opacity 0.3s ease;
+  opacity: 0;
+}
+.acc-panel[data-open="true"] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.acc-panel > div {
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* FinalCTA atmosphere — a slow jade aurora drifting behind the panel. */
+@keyframes cta-drift {
+  0%,
+  100% {
+    transform: translate3d(-4%, -2%, 0) scale(1);
+    opacity: 0.55;
+  }
+  50% {
+    transform: translate3d(6%, 4%, 0) scale(1.12);
+    opacity: 0.8;
+  }
+}
+.cta-aurora {
+  animation: cta-drift 16s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-lift,
+  .card-lift:hover {
+    transform: none;
+    transition: border-color 0.2s ease;
+  }
+  .arrow-slide,
+  .group:hover .arrow-slide {
+    transform: none;
+  }
+  .cta-aurora {
     animation: none;
   }
 }

@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ThemeToggle } from '@/components/layout/theme-toggle';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,14 +11,14 @@ import { Input } from '@/components/ui/input';
 import { Table, Thead, Th, Tbody, Tr, Td } from '@/components/ui/table';
 import { MOCK_ADMIN_TENANTS } from '@/lib/mock-data';
 import { formatKobo } from '@/lib/utils';
-import { Zap, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
+import { CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 function HealthDot({ status }: { status: 'ok' | 'warn' | 'error' }) {
   return (
     <span className={cn(
       'w-2 h-2 rounded-full',
-      status === 'ok' ? 'bg-emerald-500' : status === 'warn' ? 'bg-amber-400' : 'bg-red-500',
+      status === 'ok' ? 'bg-jade' : status === 'warn' ? 'bg-warn-bar' : 'bg-danger-bar',
     )} />
   );
 }
@@ -31,21 +32,19 @@ export default function AdminPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-slate-800 dark:bg-slate-700 flex items-center justify-center">
-            <Zap size={16} className="text-white" />
-          </div>
+          <Image src="/plinth-logo.png" alt="" width={30} height={30} />
           <div>
-            <h1 className="text-sm font-semibold text-gray-900 dark:text-slate-100">
+            <h1 className="text-sm font-semibold text-ink">
               System Overview — Plinth
             </h1>
-            <p className="text-xs text-gray-500 dark:text-slate-400">Super Admin Console</p>
+            <p className="text-xs text-mid">Super Admin Console</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Link href="/dashboard" className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">
+          <Link href="/dashboard" className="text-xs text-jade-deep hover:underline">
             ← Tenant dashboard
           </Link>
-          <Link href="/admin/tenants" className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">
+          <Link href="/admin/tenants" className="text-xs text-jade-deep hover:underline">
             Applications →
           </Link>
           <ThemeToggle />
@@ -60,29 +59,29 @@ export default function AdminPage() {
             <div className="flex items-center gap-3">
               <HealthDot status="ok" />
               <div>
-                <p className="text-xs text-gray-500 dark:text-slate-400">Queue Lag</p>
-                <p className="text-sm font-semibold text-gray-900 dark:text-slate-100">0s</p>
+                <p className="text-xs text-mid">Queue Lag</p>
+                <p className="text-sm font-semibold text-ink">0s</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <HealthDot status="ok" />
               <div>
-                <p className="text-xs text-gray-500 dark:text-slate-400">DLQ Items</p>
-                <p className="text-sm font-semibold text-gray-900 dark:text-slate-100">0</p>
+                <p className="text-xs text-mid">DLQ Items</p>
+                <p className="text-sm font-semibold text-ink">0</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <HealthDot status="ok" />
               <div>
-                <p className="text-xs text-gray-500 dark:text-slate-400">Ledger Balance</p>
-                <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">Balanced</p>
+                <p className="text-xs text-mid">Ledger Balance</p>
+                <p className="text-sm font-semibold text-jade-deep">Balanced</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <HealthDot status="warn" />
               <div>
-                <p className="text-xs text-gray-500 dark:text-slate-400">Suspense Age</p>
-                <p className="text-sm font-semibold text-amber-600 dark:text-amber-400">9 days</p>
+                <p className="text-xs text-mid">Suspense Age</p>
+                <p className="text-sm font-semibold text-warn">9 days</p>
               </div>
             </div>
           </div>
@@ -108,24 +107,24 @@ export default function AdminPage() {
             {MOCK_ADMIN_TENANTS.map((tenant) => (
               <Tr key={tenant.id}>
                 <Td>
-                  <p className="font-medium text-gray-900 dark:text-slate-100">{tenant.name}</p>
-                  <p className="text-xs font-mono text-gray-400 dark:text-slate-500">{tenant.id}</p>
+                  <p className="font-medium text-ink">{tenant.name}</p>
+                  <p className="text-xs font-mono text-faint">{tenant.id}</p>
                 </Td>
                 <Td><Badge status={tenant.mode} /></Td>
-                <Td>{tenant.mrr > 0 ? formatKobo(tenant.mrr) : '—'}</Td>
-                <Td>{tenant.customers}</Td>
+                <Td className="font-mono text-[13px] text-ink">{tenant.mrr > 0 ? formatKobo(tenant.mrr) : '—'}</Td>
+                <Td className="font-mono text-[13px] text-ink">{tenant.customers}</Td>
                 <Td>
                   {tenant.suspense > 0 ? (
-                    <span className="text-amber-600 dark:text-amber-400 font-medium">{tenant.suspense}</span>
+                    <span className="font-mono text-[13px] text-warn font-medium">{tenant.suspense}</span>
                   ) : (
-                    <span className="text-gray-400">0</span>
+                    <span className="font-mono text-[13px] text-faint">0</span>
                   )}
                 </Td>
                 <Td>
                   {tenant.queueLag > 0 ? (
-                    <span className="text-amber-600 dark:text-amber-400 font-medium">{tenant.queueLag}s</span>
+                    <span className="font-mono text-[13px] text-warn font-medium">{tenant.queueLag}s</span>
                   ) : (
-                    <span className="text-emerald-500">0s</span>
+                    <span className="font-mono text-[13px] text-jade">0s</span>
                   )}
                 </Td>
                 <Td>
@@ -146,22 +145,22 @@ export default function AdminPage() {
         <CardContent>
           <div className="grid grid-cols-3 gap-6">
             <div>
-              <p className="text-xs text-gray-500 dark:text-slate-400">Σ Debits</p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-slate-100">{formatKobo(92600000)}</p>
+              <p className="text-xs text-mid">Σ Debits</p>
+              <p className="font-mono text-lg font-semibold text-ink">{formatKobo(92600000)}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500 dark:text-slate-400">Σ Credits</p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-slate-100">{formatKobo(92600000)}</p>
+              <p className="text-xs text-mid">Σ Credits</p>
+              <p className="font-mono text-lg font-semibold text-ink">{formatKobo(92600000)}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500 dark:text-slate-400">Imbalance</p>
+              <p className="text-xs text-mid">Imbalance</p>
               <div className="flex items-center gap-2">
-                <p className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">₦0</p>
-                <CheckCircle size={16} className="text-emerald-500" />
+                <p className="font-mono text-lg font-semibold text-jade-deep">₦0</p>
+                <CheckCircle size={16} className="text-jade" />
               </div>
             </div>
           </div>
-          <p className="text-xs text-gray-400 dark:text-slate-500 mt-3">Last checked: 2 minutes ago</p>
+          <p className="text-xs text-faint mt-3">Last checked: 2 minutes ago</p>
         </CardContent>
       </Card>
 
@@ -171,7 +170,7 @@ export default function AdminPage() {
         <CardContent className="space-y-4">
           <div className="flex items-center gap-3">
             <div className="flex-1">
-              <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1.5">Tenant</label>
+              <label className="block text-xs font-medium text-body mb-1.5">Tenant</label>
               <Select value={selectedTenant} onChange={(e) => setSelectedTenant(e.target.value)}>
                 {MOCK_ADMIN_TENANTS.map((t) => (
                   <option key={t.id} value={t.id}>{t.name} ({t.id})</option>
@@ -179,7 +178,7 @@ export default function AdminPage() {
               </Select>
             </div>
             <div className="flex-1">
-              <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1.5">Advance by (seconds)</label>
+              <label className="block text-xs font-medium text-body mb-1.5">Advance by (seconds)</label>
               <Input
                 type="number"
                 placeholder="e.g. 2592000 = 30 days"

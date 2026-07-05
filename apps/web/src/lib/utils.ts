@@ -6,8 +6,12 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatKobo(kobo: number): string {
+  const hasKobo = Math.round(kobo) % 100 !== 0;
   return new Intl.NumberFormat('en-NG', {
-    style: 'currency', currency: 'NGN', minimumFractionDigits: 0,
+    style: 'currency',
+    currency: 'NGN',
+    minimumFractionDigits: hasKobo ? 2 : 0,
+    maximumFractionDigits: hasKobo ? 2 : 0,
   }).format(kobo / 100);
 }
 

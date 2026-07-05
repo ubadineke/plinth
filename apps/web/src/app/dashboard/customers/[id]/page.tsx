@@ -152,7 +152,7 @@ export default function CustomerDetailPage() {
       <div className="flex flex-col">
         <Topbar title="Customer" />
         <div className="p-6">
-          <p className="text-sm text-gray-400 dark:text-slate-500">Loading…</p>
+          <p className="text-sm text-faint">Loading…</p>
         </div>
       </div>
     );
@@ -164,8 +164,8 @@ export default function CustomerDetailPage() {
         <Topbar title="Customer" />
         <div className="p-6">
           <Card className="p-8 text-center">
-            <p className="text-sm font-medium text-gray-900 dark:text-slate-100">Customer not found</p>
-            <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">
+            <p className="text-sm font-medium text-ink">Customer not found</p>
+            <p className="text-xs text-faint mt-1">
               {error ?? 'This customer does not exist or could not be loaded.'}
             </p>
           </Card>
@@ -183,15 +183,15 @@ export default function CustomerDetailPage() {
 
       <div className="p-6 space-y-4">
         {error && (
-          <Card className="p-4 border-red-200 dark:border-red-900/50">
-            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+          <Card className="p-4 border-danger/30">
+            <p className="text-sm text-danger">{error}</p>
           </Card>
         )}
 
         {/* Customer header bar */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <h2 className="text-base font-semibold text-gray-900 dark:text-slate-100">{customer.name}</h2>
+            <h2 className="text-base font-semibold text-ink">{customer.name}</h2>
             {entitlements?.state && <Badge status={entitlements.state} />}
           </div>
         </div>
@@ -206,40 +206,40 @@ export default function CustomerDetailPage() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div>
-                  <p className="text-xs text-gray-500 dark:text-slate-400">Customer ID</p>
+                  <p className="text-xs text-mid">Customer ID</p>
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-mono text-gray-700 dark:text-slate-300">{customer.id}</p>
-                    <button onClick={copyId} className="text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                      {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                    <p className="text-sm font-mono text-body">{customer.id}</p>
+                    <button onClick={copyId} className="text-faint hover:text-jade-deep transition-colors">
+                      {copied ? <Check size={14} className="text-jade" /> : <Copy size={14} />}
                     </button>
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 dark:text-slate-400">Email</p>
-                  <p className="text-sm text-gray-700 dark:text-slate-300">{customer.email}</p>
+                  <p className="text-xs text-mid">Email</p>
+                  <p className="text-sm text-body">{customer.email}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 dark:text-slate-400">Phone</p>
-                  <p className="text-sm text-gray-700 dark:text-slate-300">{customer.phone || '—'}</p>
+                  <p className="text-xs text-mid">Phone</p>
+                  <p className="text-sm text-body">{customer.phone || '—'}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 dark:text-slate-400">Reachable via</p>
+                  <p className="text-xs text-mid">Reachable via</p>
                   <div className="flex items-center gap-1.5 mt-1">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${customer.phone ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-gray-100 text-gray-400 dark:bg-slate-800 dark:text-slate-500'}`}>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${customer.phone ? 'bg-jade-tint text-jade-deep' : 'bg-soft text-faint'}`}>
                       SMS {customer.phone ? '✓' : '—'}
                     </span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${customer.email ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-gray-100 text-gray-400 dark:bg-slate-800 dark:text-slate-500'}`}>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${customer.email ? 'bg-jade-tint text-jade-deep' : 'bg-soft text-faint'}`}>
                       Email {customer.email ? '✓' : '—'}
                     </span>
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 dark:text-slate-400">External Ref</p>
-                  <p className="text-sm font-mono text-gray-700 dark:text-slate-300">{customer.external_ref || '—'}</p>
+                  <p className="text-xs text-mid">External Ref</p>
+                  <p className="text-sm font-mono text-body">{customer.external_ref || '—'}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 dark:text-slate-400">Created</p>
-                  <p className="text-sm text-gray-700 dark:text-slate-300">{formatDate(customer.created_at)}</p>
+                  <p className="text-xs text-mid">Created</p>
+                  <p className="text-sm text-body">{formatDate(customer.created_at)}</p>
                 </div>
                 <div className="pt-1">
                   <Button
@@ -268,22 +268,22 @@ export default function CustomerDetailPage() {
                 {va ? (
                   <div className="space-y-2.5">
                     <div>
-                      <p className="text-xs text-gray-500 dark:text-slate-400">Bank</p>
-                      <p className="text-sm text-gray-700 dark:text-slate-300">{va.bank_name}</p>
+                      <p className="text-xs text-mid">Bank</p>
+                      <p className="text-sm text-body">{va.bank_name}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 dark:text-slate-400">Account number</p>
-                      <p className="text-sm font-mono font-semibold text-gray-900 dark:text-slate-100 tracking-wide">{va.account_number}</p>
+                      <p className="text-xs text-mid">Account number</p>
+                      <p className="text-sm font-mono font-semibold text-ink tracking-wide">{va.account_number}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 dark:text-slate-400">Account name</p>
-                      <p className="text-sm text-gray-700 dark:text-slate-300">{va.account_name}</p>
+                      <p className="text-xs text-mid">Account name</p>
+                      <p className="text-sm text-body">{va.account_name}</p>
                     </div>
-                    <p className="text-[11px] text-gray-400 dark:text-slate-500 pt-1">Transfers here reconcile to this customer&apos;s invoices automatically.</p>
+                    <p className="text-[11px] text-faint pt-1">Transfers here reconcile to this customer&apos;s invoices automatically.</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <p className="text-xs text-gray-400 dark:text-slate-500">No virtual account yet. Provision a dedicated NUBAN for this customer to pay by transfer.</p>
+                    <p className="text-xs text-faint">No virtual account yet. Provision a dedicated NUBAN for this customer to pay by transfer.</p>
                     <Button size="sm" variant="outline" onClick={provisionVa} disabled={provisioning}>
                       {provisioning ? 'Provisioning…' : 'Provision virtual account'}
                     </Button>
@@ -306,13 +306,13 @@ export default function CustomerDetailPage() {
                       ) : (
                         <Badge status="canceled" label="no access" />
                       )}
-                      {entitlements.tier && <span className="text-xs text-gray-500 dark:text-slate-400">{entitlements.tier}</span>}
+                      {entitlements.tier && <span className="text-xs text-mid">{entitlements.tier}</span>}
                     </div>
                     {entitlements.features && entitlements.features.length > 0 && (
                       <ul className="space-y-1 mt-2">
                         {entitlements.features.map((f) => (
-                          <li key={f} className="flex items-center gap-2 text-xs text-gray-600 dark:text-slate-400">
-                            <Check size={12} className="text-emerald-500 shrink-0" />
+                          <li key={f} className="flex items-center gap-2 text-xs text-mid">
+                            <Check size={12} className="text-jade shrink-0" />
                             {f}
                           </li>
                         ))}
@@ -320,7 +320,7 @@ export default function CustomerDetailPage() {
                     )}
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-400 dark:text-slate-500">No entitlements.</p>
+                  <p className="text-sm text-faint">No entitlements.</p>
                 )}
               </CardContent>
             </Card>
@@ -331,10 +331,10 @@ export default function CustomerDetailPage() {
                 <CardTitle>Ledger Balance</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className={`text-2xl font-semibold ${balance > 0 ? 'text-emerald-600' : balance < 0 ? 'text-red-500' : 'text-gray-900 dark:text-slate-100'}`}>
+                <p className={`font-mono text-2xl font-semibold ${balance > 0 ? 'text-jade-deep' : balance < 0 ? 'text-danger' : 'text-ink'}`}>
                   {balance === 0 ? '₦0' : formatKobo(Math.abs(balance))}
                 </p>
-                <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">
+                <p className="text-xs text-faint mt-1">
                   {balance > 0 ? 'Credit balance' : balance < 0 ? 'Amount owed' : 'No outstanding balance'}
                 </p>
               </CardContent>
@@ -343,7 +343,7 @@ export default function CustomerDetailPage() {
 
           {/* Right column */}
           <div className="lg:col-span-2 space-y-4">
-            <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl overflow-hidden">
+            <div className="bg-card border border-line rounded-xl overflow-hidden">
               <div className="px-4 pt-4">
                 <Tabs tabs={TABS} activeTab={tab} onChange={setTab} />
               </div>
@@ -352,7 +352,7 @@ export default function CustomerDetailPage() {
                 {tab === 'subscriptions' && (
                   <div>
                     {subs.length === 0 ? (
-                      <p className="text-sm text-gray-400 dark:text-slate-500 text-center py-8">No subscriptions</p>
+                      <p className="text-sm text-faint text-center py-8">No subscriptions</p>
                     ) : (
                       <Table>
                         <Thead>
@@ -371,7 +371,7 @@ export default function CustomerDetailPage() {
                               <Td className="font-mono text-xs">{sub.plan_id}</Td>
                               <Td>{sub.quantity}</Td>
                               <Td><Badge status={sub.state} /></Td>
-                              <Td className="text-gray-500 dark:text-slate-400">
+                              <Td className="text-mid">
                                 {sub.next_bill_at ? formatDate(sub.next_bill_at) : '—'}
                               </Td>
                             </Tr>
@@ -385,11 +385,11 @@ export default function CustomerDetailPage() {
                 {tab === 'entitlements' && (
                   <div>
                     {!entitlements ? (
-                      <p className="text-sm text-gray-400 dark:text-slate-500 text-center py-8">No entitlements</p>
+                      <p className="text-sm text-faint text-center py-8">No entitlements</p>
                     ) : (
                       <div className="space-y-3">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-500 dark:text-slate-400">Access:</span>
+                          <span className="text-xs text-mid">Access:</span>
                           {entitlements.has_access ? (
                             <Badge status="active" label="granted" />
                           ) : (
@@ -398,23 +398,23 @@ export default function CustomerDetailPage() {
                         </div>
                         {entitlements.state && (
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-500 dark:text-slate-400">State:</span>
+                            <span className="text-xs text-mid">State:</span>
                             <Badge status={entitlements.state} />
                           </div>
                         )}
                         {entitlements.tier && (
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-500 dark:text-slate-400">Tier:</span>
-                            <span className="text-sm text-gray-700 dark:text-slate-300">{entitlements.tier}</span>
+                            <span className="text-xs text-mid">Tier:</span>
+                            <span className="text-sm text-body">{entitlements.tier}</span>
                           </div>
                         )}
                         {entitlements.features && entitlements.features.length > 0 && (
                           <div>
-                            <p className="text-xs text-gray-500 dark:text-slate-400 mb-1">Features</p>
+                            <p className="text-xs text-mid mb-1">Features</p>
                             <ul className="space-y-1">
                               {entitlements.features.map((f) => (
-                                <li key={f} className="flex items-center gap-2 text-xs text-gray-600 dark:text-slate-400">
-                                  <Check size={12} className="text-emerald-500 shrink-0" />
+                                <li key={f} className="flex items-center gap-2 text-xs text-mid">
+                                  <Check size={12} className="text-jade shrink-0" />
                                   {f}
                                 </li>
                               ))}
@@ -429,26 +429,26 @@ export default function CustomerDetailPage() {
                 {tab === 'notifications' && (
                   <div>
                     {notifs.length === 0 ? (
-                      <p className="text-sm text-gray-400 dark:text-slate-500 text-center py-8">No notifications sent to this customer yet</p>
+                      <p className="text-sm text-faint text-center py-8">No notifications sent to this customer yet</p>
                     ) : (
                       <div className="space-y-2">
                         {notifs.map((n) => (
-                          <div key={n.id} className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 dark:border-slate-800">
+                          <div key={n.id} className="flex items-start gap-3 p-3 rounded-lg border border-line">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-0.5">
-                                <span className="text-xs px-2 py-0.5 rounded font-medium bg-gray-100 text-gray-700 dark:bg-slate-800 dark:text-slate-300">
+                                <span className="text-xs px-2 py-0.5 rounded font-medium bg-soft text-body">
                                   {NOTIF_LABEL[n.event_type ?? ''] ?? n.event_type ?? 'Notification'}
                                 </span>
                                 {n.sms_status && (
-                                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${n.sms_status === 'sent' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>SMS</span>
+                                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${n.sms_status === 'sent' ? 'bg-jade-tint text-jade-deep' : 'bg-danger-tint text-danger'}`}>SMS</span>
                                 )}
                                 {n.email_status && (
-                                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${n.email_status === 'sent' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>Email</span>
+                                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${n.email_status === 'sent' ? 'bg-jade-tint text-jade-deep' : 'bg-danger-tint text-danger'}`}>Email</span>
                                 )}
                               </div>
-                              <p className="text-xs text-gray-600 dark:text-slate-400 line-clamp-2">{n.message ?? '—'}</p>
+                              <p className="text-xs text-mid line-clamp-2">{n.message ?? '—'}</p>
                             </div>
-                            <span className="text-xs text-gray-400 dark:text-slate-500 whitespace-nowrap shrink-0">{formatDate(n.created_at)}</span>
+                            <span className="text-xs text-faint whitespace-nowrap shrink-0">{formatDate(n.created_at)}</span>
                           </div>
                         ))}
                       </div>
@@ -458,13 +458,13 @@ export default function CustomerDetailPage() {
 
                 {tab === 'ledger' && (
                   <div className="py-8 text-center">
-                    <p className="text-sm text-gray-400 dark:text-slate-500">Ledger entries will appear here</p>
+                    <p className="text-sm text-faint">Ledger entries will appear here</p>
                   </div>
                 )}
 
                 {tab === 'events' && (
                   <div className="py-8 text-center">
-                    <p className="text-sm text-gray-400 dark:text-slate-500">Customer events will appear here</p>
+                    <p className="text-sm text-faint">Customer events will appear here</p>
                   </div>
                 )}
               </div>

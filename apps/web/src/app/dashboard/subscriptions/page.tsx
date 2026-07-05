@@ -8,9 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Tabs } from '@/components/ui/tabs';
 import { Table, Thead, Th, Tbody, Tr, Td } from '@/components/ui/table';
+import { Modal } from '@/components/ui/modal';
 import { formatKobo, formatDate } from '@/lib/utils';
 import { api } from '@/lib/api';
-import { MoreHorizontal, Plus, Play, FastForward, Copy, Check, X, CreditCard } from 'lucide-react';
+import { MoreHorizontal, Plus, Play, FastForward, Copy, Check, CreditCard } from 'lucide-react';
 
 const FILTER_TABS = [
   { id: 'all', label: 'All' },
@@ -129,7 +130,7 @@ export default function SubscriptionsPage() {
           <Tabs tabs={FILTER_TABS} activeTab={activeTab} onChange={setActiveTab} />
           <div className="flex items-center gap-2">
             {/* Advance the test clock by a custom number of days */}
-            <div className="flex items-center rounded-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
+            <div className="flex items-center rounded-lg border border-line overflow-hidden bg-card">
               <input
                 type="number"
                 min={1}
@@ -137,14 +138,14 @@ export default function SubscriptionsPage() {
                 onChange={(e) => setClockDays(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter' && !busy) advanceClock(); }}
                 disabled={busy}
-                className="w-14 text-sm text-right bg-white dark:bg-slate-900 px-2 py-1.5 outline-none tabular-nums disabled:opacity-60"
+                className="w-14 text-sm text-right font-mono bg-transparent px-2 py-1.5 outline-none tabular-nums disabled:opacity-60"
                 aria-label="Days to advance"
               />
-              <span className="text-xs text-gray-400 dark:text-slate-500 pr-2 select-none">days</span>
+              <span className="text-xs text-faint pr-2 select-none">days</span>
               <button
                 onClick={advanceClock}
                 disabled={busy}
-                className="flex items-center gap-1.5 text-sm px-3 py-1.5 border-l border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-60 transition-colors"
+                className="flex items-center gap-1.5 text-sm px-3 py-1.5 border-l border-line text-body hover:bg-soft disabled:opacity-60 transition-colors"
               >
                 <FastForward size={14} /> Advance
               </button>
@@ -159,33 +160,33 @@ export default function SubscriptionsPage() {
         </div>
 
         {simNow && (
-          <p className="text-xs text-gray-400 dark:text-slate-500">
-            Simulated time: <span className="font-mono text-gray-600 dark:text-slate-300">{new Date(simNow).toLocaleString()}</span>
+          <p className="text-xs text-faint">
+            Simulated time: <span className="font-mono text-mid">{new Date(simNow).toLocaleString()}</span>
           </p>
         )}
 
         {notice && (
-          <div className="text-xs text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900 rounded-lg px-3 py-2">
+          <div className="text-xs text-jade-deep bg-jade-tint border border-jade/20 rounded-lg px-3 py-2">
             {notice}
           </div>
         )}
         {error && (
-          <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-lg px-3 py-2">
+          <div className="text-xs text-danger bg-danger-tint border border-danger/20 rounded-lg px-3 py-2">
             {error}
           </div>
         )}
 
         <Card>
           {loading ? (
-            <div className="py-16 text-center"><p className="text-sm text-gray-400 dark:text-slate-500">Loading…</p></div>
+            <div className="py-16 text-center"><p className="text-sm text-faint">Loading…</p></div>
           ) : filtered.length === 0 ? (
             <div className="py-16 text-center">
-              <p className="text-sm text-gray-400 dark:text-slate-500">No subscriptions in this state</p>
+              <p className="text-sm text-faint">No subscriptions in this state</p>
               {subs.length === 0 && customers.length > 0 && plans.length > 0 && (
                 <Button size="sm" className="mt-3" onClick={() => setShowCreate(true)}><Plus size={14} /> Create your first subscription</Button>
               )}
               {(customers.length === 0 || plans.length === 0) && (
-                <p className="text-xs text-gray-400 dark:text-slate-500 mt-2">Add a customer and a plan first.</p>
+                <p className="text-xs text-faint mt-2">Add a customer and a plan first.</p>
               )}
             </div>
           ) : (
@@ -194,7 +195,7 @@ export default function SubscriptionsPage() {
                 <tr>
                   <Th>Customer</Th>
                   <Th>Plan</Th>
-                  <Th>Amount</Th>
+                  <Th className="text-right">Amount</Th>
                   <Th>Rail</Th>
                   <Th>State</Th>
                   <Th>Next Bill</Th>
@@ -203,24 +204,24 @@ export default function SubscriptionsPage() {
                 </tr>
               </Thead>
               <Tbody>
-                {filtered.map((sub) => {
+                {filtered.map((sub, i) => {
                   const cust = customerById[sub.customer_id];
                   const plan = planById[sub.plan_id];
                   const amount = plan ? Number(plan.amount_minor) * sub.quantity : 0;
                   return (
-                    <Tr key={sub.id}>
+                    <Tr key={sub.id} className="animate-row-in" style={{ animationDelay: `${Math.min(i, 12) * 28}ms` }}>
                       <Td>
-                        <p className="font-medium text-gray-900 dark:text-slate-100">{cust?.name ?? sub.customer_id}</p>
-                        <p className="text-xs font-mono text-gray-400 dark:text-slate-500">{sub.id}</p>
+                        <p className="font-medium text-ink">{cust?.name ?? sub.customer_id}</p>
+                        <p className="text-xs font-mono text-faint">{sub.id}</p>
                       </Td>
-                      <Td>{plan?.name ?? sub.plan_id}{sub.quantity > 1 && <span className="text-gray-400"> ×{sub.quantity}</span>}</Td>
-                      <Td>{formatKobo(amount)}</Td>
+                      <Td>{plan?.name ?? sub.plan_id}{sub.quantity > 1 && <span className="text-faint"> ×{sub.quantity}</span>}</Td>
+                      <Td className="text-right font-mono text-[13px] font-medium text-ink">{formatKobo(amount)}</Td>
                       <Td><Badge status={sub.preferred_rail} /></Td>
                       <Td><Badge status={sub.state} /></Td>
-                      <Td className="text-gray-500 dark:text-slate-400">{formatDate(sub.next_bill_at)}</Td>
-                      <Td className="text-gray-500 dark:text-slate-400">{formatDate(sub.created_at)}</Td>
+                      <Td className="text-mid">{formatDate(sub.next_bill_at)}</Td>
+                      <Td className="text-mid">{formatDate(sub.created_at)}</Td>
                       <Td>
-                        <button onClick={() => setActionSub(sub)} className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-300">
+                        <button onClick={() => setActionSub(sub)} className="text-faint hover:text-mid">
                           <MoreHorizontal size={16} />
                         </button>
                       </Td>
@@ -232,38 +233,37 @@ export default function SubscriptionsPage() {
           )}
         </Card>
 
-        <p className="text-xs text-gray-400 dark:text-slate-600">
+        <p className="text-xs text-faint">
           {filtered.length} subscription{filtered.length !== 1 ? 's' : ''}
           {activeTab !== 'all' && ` in ${activeTab.replace(/_/g, ' ')} state`}
         </p>
       </div>
 
-      {showCreate && (
-        <CreateSubscriptionModal
-          customers={customers}
-          plans={plans}
-          onClose={() => setShowCreate(false)}
-          onCreated={async () => { setShowCreate(false); flash('Subscription created.'); await load(); }}
-        />
-      )}
+      <CreateSubscriptionModal
+        open={showCreate}
+        customers={customers}
+        plans={plans}
+        onClose={() => setShowCreate(false)}
+        onCreated={async () => { setShowCreate(false); flash('Subscription created.'); await load(); }}
+      />
 
-      {actionSub && (
-        <SubscriptionActionsModal
-          sub={actionSub}
-          customer={customerById[actionSub.customer_id]}
-          plan={planById[actionSub.plan_id]}
-          onClose={() => setActionSub(null)}
-          onChanged={async () => { await load(); }}
-          flash={flash}
-        />
-      )}
+      <SubscriptionActionsModal
+        open={!!actionSub}
+        sub={actionSub}
+        customer={actionSub ? customerById[actionSub.customer_id] : undefined}
+        plan={actionSub ? planById[actionSub.plan_id] : undefined}
+        onClose={() => setActionSub(null)}
+        onChanged={async () => { await load(); }}
+        flash={flash}
+      />
     </div>
   );
 }
 
 function CreateSubscriptionModal({
-  customers, plans, onClose, onCreated,
+  open, customers, plans, onClose, onCreated,
 }: {
+  open: boolean;
   customers: Customer[];
   plans: Plan[];
   onClose: () => void;
@@ -275,6 +275,15 @@ function CreateSubscriptionModal({
   const [rail, setRail] = useState<'card' | 'transfer' | 'direct_debit'>('card');
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
+
+  useEffect(() => {
+    if (!open) return;
+    setCustomerId(customers[0]?.id ?? '');
+    setPlanId(plans[0]?.id ?? '');
+    setQuantity(1);
+    setRail('card');
+    setErr('');
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function submit() {
     if (!customerId || !planId) return;
@@ -291,7 +300,7 @@ function CreateSubscriptionModal({
   }
 
   return (
-    <Modal title="New subscription" onClose={onClose}>
+    <Modal open={open} title="New subscription" onClose={onClose}>
       <div className="space-y-4">
         <Field label="Customer">
           <Select value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
@@ -315,7 +324,7 @@ function CreateSubscriptionModal({
             </Select>
           </Field>
         </div>
-        {err && <p className="text-xs text-red-500">{err}</p>}
+        {err && <p className="text-xs text-danger">{err}</p>}
         <div className="flex justify-end gap-2 pt-1">
           <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
           <Button size="sm" onClick={submit} disabled={saving || !customerId || !planId}>
@@ -328,9 +337,10 @@ function CreateSubscriptionModal({
 }
 
 function SubscriptionActionsModal({
-  sub, customer, plan, onClose, onChanged, flash,
+  open, sub, customer, plan, onClose, onChanged, flash,
 }: {
-  sub: Subscription;
+  open: boolean;
+  sub: Subscription | null;
   customer?: Customer;
   plan?: Plan;
   onClose: () => void;
@@ -340,12 +350,27 @@ function SubscriptionActionsModal({
   const [checkout, setCheckout] = useState<{ checkoutLink: string; orderReference: string } | null>(null);
   const [working, setWorking] = useState('');
   const [copied, setCopied] = useState(false);
-  const amount = plan ? Number(plan.amount_minor) * sub.quantity : 0;
+  // Cache the last non-null subscription so the panel keeps its content while the
+  // close animation plays (the parent nulls `sub` immediately on close).
+  const [cached, setCached] = useState<{ sub: Subscription; customer?: Customer; plan?: Plan } | null>(null);
+
+  useEffect(() => {
+    if (sub) {
+      setCached({ sub, customer, plan });
+      setCheckout(null);
+      setWorking('');
+      setCopied(false);
+    }
+  }, [sub, customer, plan]);
+
+  const data = cached;
+  const amount = data?.plan ? Number(data.plan.amount_minor) * data.sub.quantity : 0;
 
   async function genLink() {
+    if (!data) return;
     setWorking('link');
     try {
-      const res = await api.subscriptions.checkoutLink(sub.id);
+      const res = await api.subscriptions.checkoutLink(data.sub.id);
       setCheckout({ checkoutLink: res.checkoutLink, orderReference: res.orderReference });
     } catch (e: any) {
       flash(`Checkout link failed: ${e.message}`);
@@ -355,11 +380,12 @@ function SubscriptionActionsModal({
   }
 
   async function simulate() {
+    if (!data) return;
     setWorking('sim');
     try {
       // orderReference convention: plinth_{tenantId}_{customerId}
       const tenantId = typeof window !== 'undefined' ? localStorage.getItem('nomba_tenant_id') ?? '' : '';
-      const orderRef = checkout?.orderReference ?? `plinth_${tenantId}_${sub.customer_id}`;
+      const orderRef = checkout?.orderReference ?? `plinth_${tenantId}_${data.sub.customer_id}`;
       await api.webhooks.simulatePayment(orderRef, amount);
       flash('Payment simulated — card is now on file. Run a billing tick to charge.');
       onClose();
@@ -372,65 +398,52 @@ function SubscriptionActionsModal({
   }
 
   return (
-    <Modal title="Subscription actions" onClose={onClose}>
-      <div className="space-y-4">
-        <div className="text-sm">
-          <p className="font-medium text-gray-900 dark:text-slate-100">{customer?.name ?? sub.customer_id}</p>
-          <p className="text-xs text-gray-500 dark:text-slate-400">{plan?.name ?? sub.plan_id} · {formatKobo(amount)} · <Badge status={sub.state} /></p>
+    <Modal open={open} title="Subscription actions" onClose={onClose}>
+      {data && (
+        <div className="space-y-4">
+          <div className="text-sm">
+            <p className="font-medium text-ink">{data.customer?.name ?? data.sub.customer_id}</p>
+            <p className="text-xs text-mid flex items-center gap-1.5">{data.plan?.name ?? data.sub.plan_id} · <span className="font-mono">{formatKobo(amount)}</span> · <Badge status={data.sub.state} /></p>
+          </div>
+
+          <div className="space-y-2">
+            <Button variant="outline" size="sm" className="w-full justify-start" onClick={genLink} disabled={working === 'link'}>
+              <CreditCard size={14} /> {working === 'link' ? 'Generating…' : 'Generate checkout link'}
+            </Button>
+
+            {checkout && (
+              <div className="flex items-center gap-2 bg-soft border border-line rounded-lg px-3 py-2">
+                <code className="flex-1 text-xs font-mono text-ink break-all">{checkout.checkoutLink}</code>
+                <button
+                  onClick={() => { navigator.clipboard.writeText(checkout.checkoutLink); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
+                  className="shrink-0 text-faint hover:text-jade-deep"
+                >
+                  {copied ? <Check size={14} className="text-jade" /> : <Copy size={14} />}
+                </button>
+              </div>
+            )}
+
+            <Button variant="secondary" size="sm" className="w-full justify-start" onClick={simulate} disabled={working === 'sim'}>
+              <Play size={14} /> {working === 'sim' ? 'Simulating…' : 'Simulate payment (dev)'}
+            </Button>
+            <p className="text-xs text-faint">
+              In fake-Nomba mode, "Simulate payment" tokenizes a test card onto this customer's subscriptions so billing ticks can charge.
+            </p>
+          </div>
+
+          <div className="flex justify-end pt-1">
+            <Button variant="ghost" size="sm" onClick={onClose}>Close</Button>
+          </div>
         </div>
-
-        <div className="space-y-2">
-          <Button variant="outline" size="sm" className="w-full justify-start" onClick={genLink} disabled={working === 'link'}>
-            <CreditCard size={14} /> {working === 'link' ? 'Generating…' : 'Generate checkout link'}
-          </Button>
-
-          {checkout && (
-            <div className="flex items-center gap-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-2">
-              <code className="flex-1 text-xs font-mono text-gray-900 dark:text-slate-100 break-all">{checkout.checkoutLink}</code>
-              <button
-                onClick={() => { navigator.clipboard.writeText(checkout.checkoutLink); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
-                className="shrink-0 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
-              >
-                {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
-              </button>
-            </div>
-          )}
-
-          <Button variant="secondary" size="sm" className="w-full justify-start" onClick={simulate} disabled={working === 'sim'}>
-            <Play size={14} /> {working === 'sim' ? 'Simulating…' : 'Simulate payment (dev)'}
-          </Button>
-          <p className="text-xs text-gray-400 dark:text-slate-500">
-            In fake-Nomba mode, "Simulate payment" tokenizes a test card onto this customer's subscriptions so billing ticks can charge.
-          </p>
-        </div>
-
-        <div className="flex justify-end pt-1">
-          <Button variant="ghost" size="sm" onClick={onClose}>Close</Button>
-        </div>
-      </div>
+      )}
     </Modal>
-  );
-}
-
-function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-slate-800 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-slate-100">{title}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-300"><X size={18} /></button>
-        </div>
-        {children}
-      </div>
-    </div>
   );
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1.5">{label}</label>
+      <label className="block text-xs font-medium text-body mb-1.5">{label}</label>
       {children}
     </div>
   );

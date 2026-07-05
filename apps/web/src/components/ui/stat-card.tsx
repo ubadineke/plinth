@@ -12,19 +12,26 @@ interface StatCardProps {
 
 export function StatCard({ label, value, sub, trend, icon, tooltip }: StatCardProps) {
   return (
-    <Card className="p-6" title={tooltip}>
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs text-gray-500 dark:text-slate-400 font-medium uppercase tracking-wide">{label}</p>
-          <p className="mt-1 text-2xl font-semibold text-gray-900 dark:text-slate-50">{value}</p>
-          {sub && <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">{sub}</p>}
+    <Card className="px-4 py-3.5" title={tooltip}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="label-mono text-mid">{label}</p>
+          <p className="mt-1.5 font-mono text-[22px] font-semibold leading-none tracking-tight text-ink">
+            {value}
+          </p>
+          {sub && <p className="mt-1.5 text-xs text-mid">{sub}</p>}
           {trend && (
-            <p className={cn('mt-1 text-xs font-medium', trend.positive ? 'text-emerald-600' : 'text-red-500')}>
+            <p
+              className={cn(
+                'mt-1.5 font-mono text-[11px] font-medium',
+                trend.positive ? 'text-jade-deep' : 'text-danger',
+              )}
+            >
               {trend.positive ? '↑' : '↓'} {trend.value}
             </p>
           )}
         </div>
-        {icon && <div className="text-gray-400 dark:text-slate-500">{icon}</div>}
+        {icon && <div className="shrink-0 text-faint">{icon}</div>}
       </div>
     </Card>
   );

@@ -94,17 +94,17 @@ export default function TransfersPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <ArrowDownLeft size={14} className="text-emerald-500" />
+              <ArrowDownLeft size={14} className="text-jade" />
               <CardTitle>Settled Payments</CardTitle>
             </div>
           </CardHeader>
           {loading ? (
             <CardContent>
-              <p className="text-sm text-gray-400 dark:text-slate-500 py-8 text-center">Loading…</p>
+              <p className="text-sm text-faint py-8 text-center">Loading…</p>
             </CardContent>
           ) : invoices.length === 0 ? (
             <CardContent>
-              <p className="text-sm text-gray-400 dark:text-slate-500 py-8 text-center">No settled payments yet</p>
+              <p className="text-sm text-faint py-8 text-center">No settled payments yet</p>
             </CardContent>
           ) : (
             <Table>
@@ -113,8 +113,8 @@ export default function TransfersPage() {
                   <Th>Date</Th>
                   <Th>Customer</Th>
                   <Th>Invoice</Th>
-                  <Th>Amount (Tenant)</Th>
-                  <Th>Plinth Fee (0.5%)</Th>
+                  <Th className="text-right">Amount (Tenant)</Th>
+                  <Th className="text-right">Plinth Fee (0.5%)</Th>
                   <Th>State</Th>
                 </tr>
               </Thead>
@@ -125,21 +125,21 @@ export default function TransfersPage() {
                   const tenantNet = amount - plinthCut;
                   return (
                     <Tr key={inv.id}>
-                      <Td className="text-gray-500 dark:text-slate-400">
+                      <Td className="text-mid">
                         {inv.closed_at ? formatDate(inv.closed_at) : formatDate(inv.created_at)}
                       </Td>
-                      <Td className="font-medium text-gray-900 dark:text-slate-100">
+                      <Td className="font-medium text-ink">
                         {customerNames[inv.customer_id] ?? (
-                          <span className="font-mono text-xs text-gray-500 dark:text-slate-400">{inv.customer_id}</span>
+                          <span className="font-mono text-xs text-mid">{inv.customer_id}</span>
                         )}
                       </Td>
                       <Td>
-                        <span className="font-mono text-xs text-gray-500 dark:text-slate-400">{inv.id}</span>
+                        <span className="font-mono text-xs text-mid">{inv.id}</span>
                       </Td>
-                      <Td className="text-gray-900 dark:text-slate-100 font-medium">
+                      <Td className="text-right font-mono text-[13px] font-medium text-ink">
                         {formatKobo(tenantNet)}
                       </Td>
-                      <Td className="text-indigo-600 dark:text-indigo-400 font-medium">
+                      <Td className="text-right font-mono text-[13px] font-medium text-jade-deep">
                         {formatKobo(plinthCut)}
                       </Td>
                       <Td><Badge status={inv.state} label={inv.state} /></Td>
@@ -156,9 +156,9 @@ export default function TransfersPage() {
           <CardHeader>
             <div className="flex items-center gap-2">
               {suspenseItems.length > 0 ? (
-                <AlertTriangle size={14} className="text-amber-500" />
+                <AlertTriangle size={14} className="text-warn" />
               ) : (
-                <CheckCircle size={14} className="text-emerald-500" />
+                <CheckCircle size={14} className="text-jade" />
               )}
               <CardTitle>
                 {suspenseItems.length > 0
@@ -167,7 +167,7 @@ export default function TransfersPage() {
               </CardTitle>
             </div>
             {suspenseItems.length > 0 && (
-              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+              <p className="text-xs text-warn mt-1">
                 Payments received but not matched to an invoice — review and resolve manually
               </p>
             )}
@@ -176,8 +176,8 @@ export default function TransfersPage() {
           {suspenseItems.length === 0 ? (
             <CardContent>
               <div className="py-8 text-center">
-                <CheckCircle size={24} className="text-emerald-500 mx-auto mb-2" />
-                <p className="text-sm text-gray-400 dark:text-slate-500">No items in suspense</p>
+                <CheckCircle size={24} className="text-jade mx-auto mb-2" />
+                <p className="text-sm text-faint">No items in suspense</p>
               </div>
             </CardContent>
           ) : (
@@ -186,7 +186,7 @@ export default function TransfersPage() {
                 <tr>
                   <Th>Date</Th>
                   <Th>Account Ref</Th>
-                  <Th>Amount</Th>
+                  <Th className="text-right">Amount</Th>
                   <Th>Narration</Th>
                   <Th>Reason</Th>
                   <Th>Action</Th>
@@ -196,12 +196,12 @@ export default function TransfersPage() {
                 {suspenseItems.map((item) => (
                   <>
                     <Tr key={item.id}>
-                      <Td className="text-gray-500 dark:text-slate-400">{formatDate(item.created_at)}</Td>
-                      <Td className="font-mono text-xs">{item.account_ref}</Td>
-                      <Td>{formatKobo(Number(item.amount_minor))}</Td>
-                      <Td className="text-gray-500 dark:text-slate-400 text-xs">{item.narration}</Td>
+                      <Td className="text-mid">{formatDate(item.created_at)}</Td>
+                      <Td className="font-mono text-xs text-mid">{item.account_ref}</Td>
+                      <Td className="text-right font-mono text-[13px] font-medium text-ink">{formatKobo(Number(item.amount_minor))}</Td>
+                      <Td className="text-mid text-xs">{item.narration}</Td>
                       <Td>
-                        <span className="text-xs font-mono text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded">
+                        <span className="label-mono text-warn bg-warn-tint px-2 py-0.5 rounded-full">
                           {item.reason}
                         </span>
                       </Td>
@@ -217,7 +217,7 @@ export default function TransfersPage() {
                     </Tr>
                     {resolveId === item.id && (
                       <tr key={`${item.id}-form`}>
-                        <td colSpan={6} className="px-4 pb-4 bg-gray-50 dark:bg-slate-800/50">
+                        <td colSpan={6} className="px-4 pb-4 bg-soft">
                           <div className="flex items-center gap-3 pt-3">
                             <Input
                               placeholder="Add resolution note…"

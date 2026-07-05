@@ -54,8 +54,8 @@ function ChannelPill({ icon: Icon, label, status }: { icon: typeof Mail; label: 
     <span
       className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${
         ok
-          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-          : 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+          ? 'bg-jade-tint text-jade-deep'
+          : 'bg-danger-tint text-danger'
       }`}
       title={`${label}: ${status}`}
     >
@@ -125,27 +125,27 @@ export default function NotificationsPage() {
         <div className="flex items-center justify-between gap-4">
           <Tabs tabs={FILTER_TABS} activeTab={activeTab} onChange={setActiveTab} />
           <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
             <input
               type="text"
               placeholder="Search customer, event, message…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 w-72 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+              className="pl-9 pr-3 py-1.5 text-sm rounded-lg border border-line bg-card text-ink w-72 focus:outline-none focus:ring-2 focus:ring-jade/25"
             />
           </div>
         </div>
 
         <Card>
           {loading ? (
-            <div className="py-16 text-center"><p className="text-sm text-gray-400 dark:text-slate-500">Loading notifications…</p></div>
+            <div className="py-16 text-center"><p className="text-sm text-faint">Loading notifications…</p></div>
           ) : error ? (
-            <div className="py-16 text-center"><p className="text-sm text-red-500 dark:text-red-400">{error}</p></div>
+            <div className="py-16 text-center"><p className="text-sm text-danger">{error}</p></div>
           ) : filtered.length === 0 ? (
             <div className="py-16 text-center">
-              <MessageSquare size={28} className="mx-auto text-gray-300 dark:text-slate-700 mb-3" />
-              <p className="text-sm text-gray-400 dark:text-slate-500">No notifications yet</p>
-              <p className="text-xs text-gray-400 dark:text-slate-600 mt-1">Customer SMS + email sent on billing events will appear here.</p>
+              <MessageSquare size={28} className="mx-auto text-faint/70 mb-3" />
+              <p className="text-sm text-faint">No notifications yet</p>
+              <p className="text-xs text-faint mt-1">Customer SMS + email sent on billing events will appear here.</p>
             </div>
           ) : (
             <Table>
@@ -165,13 +165,13 @@ export default function NotificationsPage() {
                     className="cursor-pointer"
                     onClick={() => setExpanded(expanded === n.id ? null : n.id)}
                   >
-                    <Td className="font-medium text-gray-900 dark:text-slate-100">
+                    <Td className="font-medium text-ink">
                       {customerNames[n.customer_id] ?? (
-                        <span className="font-mono text-xs text-gray-500 dark:text-slate-400">{n.customer_id}</span>
+                        <span className="font-mono text-xs text-mid">{n.customer_id}</span>
                       )}
                     </Td>
                     <Td>
-                      <span className="text-xs px-2 py-0.5 rounded font-medium bg-gray-100 text-gray-700 dark:bg-slate-800 dark:text-slate-300">
+                      <span className="label-mono px-2 py-0.5 rounded-full bg-soft text-body">
                         {eventLabel(n.event_type)}
                       </span>
                     </Td>
@@ -180,15 +180,15 @@ export default function NotificationsPage() {
                         <ChannelPill icon={MessageSquare} label="SMS" status={n.sms_status} />
                         <ChannelPill icon={Mail} label="Email" status={n.email_status} />
                         {!n.sms_status && !n.email_status && (
-                          <span className="text-xs text-gray-400 dark:text-slate-600">—</span>
+                          <span className="text-xs text-faint">—</span>
                         )}
                       </div>
                     </Td>
-                    <Td className="text-gray-500 dark:text-slate-400 max-w-md">
+                    <Td className="text-mid max-w-md">
                       {expanded === n.id ? (
                         <div className="space-y-1 whitespace-pre-wrap text-xs">
-                          <p className="text-gray-700 dark:text-slate-300">{n.message ?? '—'}</p>
-                          <p className="text-gray-400 dark:text-slate-600">
+                          <p className="text-body">{n.message ?? '—'}</p>
+                          <p className="text-faint">
                             {n.sms_to && <>SMS → {n.sms_to} ({n.sms_status}){n.email_to ? '  ·  ' : ''}</>}
                             {n.email_to && <>Email → {n.email_to} ({n.email_status})</>}
                           </p>
@@ -197,7 +197,7 @@ export default function NotificationsPage() {
                         <span className="line-clamp-1 text-xs">{n.message ?? '—'}</span>
                       )}
                     </Td>
-                    <Td className="text-gray-500 dark:text-slate-400 whitespace-nowrap">{formatDate(n.created_at)}</Td>
+                    <Td className="text-mid whitespace-nowrap">{formatDate(n.created_at)}</Td>
                   </Tr>
                 ))}
               </Tbody>
@@ -206,7 +206,7 @@ export default function NotificationsPage() {
         </Card>
 
         {!loading && !error && (
-          <p className="text-xs text-gray-400 dark:text-slate-600">
+          <p className="text-xs text-faint">
             {filtered.length} notification{filtered.length !== 1 ? 's' : ''} · click a row for detail
           </p>
         )}

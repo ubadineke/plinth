@@ -1,8 +1,9 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Zap, Mail } from 'lucide-react';
+import { Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
@@ -41,23 +42,21 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-canvas flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center mb-4">
-            <Zap size={24} className="text-white" />
-          </div>
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Plinth</h1>
-          <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
+          <Image src="/plinth-logo.png" alt="Plinth" width={48} height={48} className="mb-4" priority />
+          <h1 className="text-lg font-display font-semibold tracking-tight text-ink">Plinth</h1>
+          <p className="text-sm text-mid mt-1">
             {step === 'form' ? 'Enter your email to log in' : 'Check your inbox'}
           </p>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
+        <div className="bg-card border border-line rounded-xl p-6 shadow-card">
           {step === 'form' ? (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1.5">
+                <label className="block text-xs font-medium text-body mb-1.5">
                   Business email
                 </label>
                 <Input
@@ -67,27 +66,27 @@ export default function LoginPage() {
                   placeholder="billing@acme.ng"
                   autoFocus
                 />
-                {error && <p className="text-xs text-red-500 mt-1.5">{error}</p>}
+                {error && <p className="text-xs text-danger mt-1.5">{error}</p>}
               </div>
               <Button type="submit" className="w-full" disabled={loading || (!USE_MOCKS && !email.trim())}>
                 {loading ? 'Sending…' : USE_MOCKS ? 'Enter dashboard →' : 'Send login link →'}
               </Button>
               {USE_MOCKS && (
-                <p className="text-xs text-gray-400 dark:text-slate-500 text-center">Demo mode — no login required, click to continue.</p>
+                <p className="text-xs text-faint text-center">Demo mode — no login required, click to continue.</p>
               )}
             </form>
           ) : (
             <div className="text-center space-y-3">
-              <div className="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center mx-auto">
-                <Mail size={22} className="text-indigo-600 dark:text-indigo-400" />
+              <div className="w-12 h-12 rounded-xl bg-jade-tint flex items-center justify-center mx-auto">
+                <Mail size={22} className="text-jade-deep" />
               </div>
-              <p className="text-sm font-medium text-gray-900 dark:text-slate-100">Login link sent</p>
-              <p className="text-xs text-gray-500 dark:text-slate-400">
+              <p className="text-sm font-medium text-ink font-display font-semibold tracking-tight">Login link sent</p>
+              <p className="text-xs text-mid">
                 We sent a link to <strong>{email}</strong>. Click it to log in — it expires in 7 days.
               </p>
               <button
                 onClick={() => { setStep('form'); setEmail(''); }}
-                className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
+                className="text-xs text-jade-deep hover:underline"
               >
                 Use a different email
               </button>
@@ -95,9 +94,9 @@ export default function LoginPage() {
           )}
         </div>
 
-        <p className="text-center text-xs text-gray-400 dark:text-slate-500 mt-5">
+        <p className="text-center text-xs text-faint mt-5">
           Don't have an account?{' '}
-          <Link href="/signup" className="text-indigo-600 dark:text-indigo-400 hover:underline">Apply for access</Link>
+          <Link href="/signup" className="text-jade-deep hover:underline">Apply for access</Link>
         </p>
       </div>
     </div>

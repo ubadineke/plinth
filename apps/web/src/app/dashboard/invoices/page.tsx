@@ -113,15 +113,15 @@ export default function InvoicesPage() {
         <Card>
           {loading ? (
             <div className="py-16 text-center">
-              <p className="text-sm text-gray-400 dark:text-slate-500">Loading invoices…</p>
+              <p className="text-sm text-faint">Loading invoices…</p>
             </div>
           ) : error ? (
             <div className="py-16 text-center">
-              <p className="text-sm text-red-500 dark:text-red-400">{error}</p>
+              <p className="text-sm text-danger">{error}</p>
             </div>
           ) : filtered.length === 0 ? (
             <div className="py-16 text-center">
-              <p className="text-sm text-gray-400 dark:text-slate-500">No invoices in this state</p>
+              <p className="text-sm text-faint">No invoices in this state</p>
             </div>
           ) : (
             <Table>
@@ -129,7 +129,7 @@ export default function InvoicesPage() {
                 <tr>
                   <Th>Invoice ID</Th>
                   <Th>Customer</Th>
-                  <Th>Amount</Th>
+                  <Th className="text-right">Amount</Th>
                   <Th>Mode</Th>
                   <Th>Period</Th>
                   <Th>State</Th>
@@ -138,30 +138,30 @@ export default function InvoicesPage() {
                 </tr>
               </Thead>
               <Tbody>
-                {filtered.map((inv) => (
-                  <Tr key={inv.id}>
+                {filtered.map((inv, i) => (
+                  <Tr key={inv.id} className="animate-row-in" style={{ animationDelay: `${Math.min(i, 12) * 28}ms` }}>
                     <Td>
-                      <span className="font-mono text-xs text-gray-600 dark:text-slate-400">{inv.id}</span>
+                      <span className="font-mono text-xs text-mid">{inv.id}</span>
                     </Td>
-                    <Td className="font-medium text-gray-900 dark:text-slate-100">
+                    <Td className="font-medium text-ink">
                       {customerNames[inv.customer_id] ?? (
-                        <span className="font-mono text-xs text-gray-500 dark:text-slate-400">{inv.customer_id}</span>
+                        <span className="font-mono text-xs text-mid">{inv.customer_id}</span>
                       )}
                     </Td>
-                    <Td>{formatKobo(Number(inv.amount_due))}</Td>
+                    <Td className="text-right font-mono text-[13px] font-medium text-ink">{formatKobo(Number(inv.amount_due))}</Td>
                     <Td>
-                      <span className={`text-xs px-2 py-0.5 rounded font-medium ${
+                      <span className={`label-mono px-2 py-0.5 rounded-full ${
                         inv.billing_mode === 'advance'
-                          ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                          : 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+                          ? 'bg-info-tint text-info'
+                          : 'bg-soft text-mid'
                       }`}>
                         {inv.billing_mode}
                       </span>
                     </Td>
-                    <Td className="text-gray-500 dark:text-slate-400">{formatPeriod(inv.period_start, inv.period_end)}</Td>
+                    <Td className="text-mid">{formatPeriod(inv.period_start, inv.period_end)}</Td>
                     <Td><Badge status={inv.state} /></Td>
-                    <Td className="text-gray-500 dark:text-slate-400">{inv.due_at ? formatDate(inv.due_at) : '—'}</Td>
-                    <Td className="text-gray-500 dark:text-slate-400">{inv.closed_at ? formatDate(inv.closed_at) : '—'}</Td>
+                    <Td className="text-mid">{inv.due_at ? formatDate(inv.due_at) : '—'}</Td>
+                    <Td className="text-mid">{inv.closed_at ? formatDate(inv.closed_at) : '—'}</Td>
                   </Tr>
                 ))}
               </Tbody>
@@ -170,7 +170,7 @@ export default function InvoicesPage() {
         </Card>
 
         {!loading && !error && (
-          <p className="text-xs text-gray-400 dark:text-slate-600">
+          <p className="text-xs text-faint">
             {filtered.length} invoice{filtered.length !== 1 ? 's' : ''}
           </p>
         )}

@@ -20,13 +20,24 @@ export function Section({
   id,
   className = "",
   children,
+  full = false,
 }: {
   id?: string;
   className?: string;
   children: ReactNode;
+  /** fill the viewport (min 100svh) with content vertically centred — desktop
+      up; on mobile it falls back to natural height so phones don't over-scroll */
+  full?: boolean;
 }) {
   return (
-    <section id={id} className={`scroll-mt-24 py-20 md:py-28 ${className}`}>
+    <section
+      id={id}
+      className={`scroll-mt-24 ${
+        full
+          ? "flex flex-col justify-center py-16 md:min-h-[100svh] md:py-20"
+          : "py-20 md:py-28"
+      } ${className}`}
+    >
       {children}
     </section>
   );
@@ -63,7 +74,7 @@ export function SectionHeading({
   return (
     <div className={`${center ? "mx-auto text-center" : ""} max-w-2xl ${className}`}>
       {eyebrow ? <Eyebrow>{eyebrow}</Eyebrow> : null}
-      <h2 className="mt-4 font-sans text-4xl font-semibold leading-[1.02] tracking-tight text-ink md:text-5xl">
+      <h2 className="mt-4 font-display text-4xl font-semibold leading-[1.02] tracking-tight text-ink md:text-5xl">
         {title}
       </h2>
       {sub ? <p className="mt-4 text-lg leading-relaxed text-ink/65">{sub}</p> : null}

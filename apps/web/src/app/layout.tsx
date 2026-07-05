@@ -1,9 +1,6 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from '@/components/providers';
-
-const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'Plinth',
@@ -17,7 +14,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      {/* Satoshi via tailwind font-sans; brand fonts are self-hosted @font-face */}
+      <body className="font-sans">
         <Providers>{children}</Providers>
       </body>
     </html>

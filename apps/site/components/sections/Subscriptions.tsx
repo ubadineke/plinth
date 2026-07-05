@@ -316,7 +316,7 @@ function ImmersiveStory() {
               <span className="h-1 w-1 rounded-full bg-jade" />
               The problem
             </span>
-            <h2 className="mt-4 max-w-3xl font-sans text-3xl font-semibold leading-[1.05] tracking-tight text-bone md:text-4xl">
+            <h2 className="mt-4 max-w-3xl font-display text-3xl font-semibold leading-[1.05] tracking-tight text-bone md:text-4xl">
               Recurring payments in Nigeria are leaky and manual.
             </h2>
             <div className="mt-8 grid grid-cols-3 gap-5">
@@ -326,11 +326,11 @@ function ImmersiveStory() {
                     className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.04]"
                     style={{ height: "clamp(150px,26vh,290px)" }}
                   >
-                    <span className="absolute left-4 top-4 z-10 text-sm font-medium text-bone/30">
+                    <span className="absolute left-4 top-4 z-10 font-mono text-sm font-medium text-bone/30">
                       {c.n}
                     </span>
                     <div className="absolute inset-0">{c.media}</div>
-                    <span className="absolute bottom-4 left-4 z-10 text-lg font-semibold text-bone">
+                    <span className="absolute bottom-4 left-4 z-10 font-display text-lg font-semibold text-bone">
                       {c.title}
                     </span>
                   </div>
@@ -363,7 +363,7 @@ function ImmersiveStory() {
           <div className="mx-auto w-full max-w-3xl text-center">
             <div data-reveal data-s="0.64" data-e="0.72" style={{ opacity: 0, transform: "translateY(24px)" }}>
               <Eyebrow>Plinth Subscriptions · the billing engine</Eyebrow>
-              <h2 className="mt-4 font-sans text-[clamp(36px,5vw,64px)] font-semibold leading-[1.02] tracking-tight text-ink">
+              <h2 className="mt-4 font-display text-[clamp(36px,5vw,64px)] font-semibold leading-[1.02] tracking-tight text-ink">
                 Billing that recovers what others lose.
               </h2>
             </div>
@@ -388,7 +388,7 @@ function ImmersiveStory() {
                   className="border-l-2 border-ink/10 pl-6 text-left"
                   style={{ opacity: 0, transform: "translateY(24px)" }}
                 >
-                  <h3 className="font-sans text-base font-semibold text-ink">{f.title}</h3>
+                  <h3 className="font-display text-base font-semibold text-ink">{f.title}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-ink/65">{f.body}</p>
                 </div>
               ))}
@@ -420,7 +420,7 @@ function ImmersiveStory() {
             className="pointer-events-none fixed z-40 max-w-[260px] rounded-xl border border-ink/10 bg-ink/95 px-3.5 py-2.5 text-bone shadow-lg backdrop-blur"
             style={{ left: 0, top: 0, transform: `translate(${tip.x + 18}px, ${tip.y + 18}px)` }}
           >
-            <div className="font-sans text-sm font-semibold">{tip.name}</div>
+            <div className="font-display text-sm font-semibold">{tip.name}</div>
             <div className="mt-1 text-xs leading-relaxed text-bone/65">{tip.desc}</div>
           </div>
         )}
@@ -472,7 +472,7 @@ function StaticSubscriptions() {
         <div className="mt-12 grid gap-x-10 gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
           {features.map((f) => (
             <div key={f.title} className="border-l-2 border-ink/10 pl-6">
-              <h3 className="font-sans text-base font-semibold text-ink">{f.title}</h3>
+              <h3 className="font-display text-base font-semibold text-ink">{f.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-ink/65">{f.body}</p>
             </div>
           ))}

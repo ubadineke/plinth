@@ -1,4 +1,7 @@
 import { Container, Section, SectionHeading, PrimaryButton, SecondaryButton } from "./ui";
+import { Reveal } from "./Reveal";
+import { CodePanel } from "./CodePanel";
+import { CheckIcon } from "./icons";
 
 const snippet = `import { Plinth } from "@plinth/sdk";
 const plinth = new Plinth(process.env.PLINTH_API_KEY);
@@ -24,42 +27,42 @@ const bullets = ["Clean REST API", "Typed SDKs", "Webhooks for every event", "Id
 
 export default function Developers() {
   return (
-    <Section id="developers" className="bg-white">
+    <Section id="developers" full className="bg-white">
       <Container>
-        <div className="grid items-center gap-12 lg:grid-cols-2">
-          <div>
-            <SectionHeading
-              eyebrow="Developer experience"
-              title="Integrate in a few lines."
-              sub="Drop Plinth in; don't rebuild billing. A clean API, SDKs, and webhooks — money-critical correctness handled for you."
-            />
-            <ul className="mt-8 grid grid-cols-2 gap-3">
-              {bullets.map((b) => (
-                <li key={b} className="flex items-center gap-2 text-sm text-ink/75">
-                  <svg aria-hidden viewBox="0 0 16 16" className="h-4 w-4 shrink-0 text-jade" fill="none">
-                    <path d="M3.5 8.5l3 3 6-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  {b}
-                </li>
-              ))}
-            </ul>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <PrimaryButton href="#">Read the docs</PrimaryButton>
-              <SecondaryButton href="#">View API reference</SecondaryButton>
+        <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+          <Reveal>
+            <div>
+              <SectionHeading
+                eyebrow="Developer experience"
+                title={
+                  <>
+                    Integrate in <span className="text-jade">a few lines.</span>
+                  </>
+                }
+                sub="Drop Plinth in; don't rebuild billing. A clean API, SDKs, and webhooks — money-critical correctness handled for you."
+              />
+              <ul className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {bullets.map((b) => (
+                  <li key={b} className="flex items-center gap-2.5 text-sm text-ink/75">
+                    <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-jade/12 text-jade-600">
+                      <CheckIcon className="h-3 w-3" />
+                    </span>
+                    {b}
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <PrimaryButton href="#" className="group">
+                  Read the docs
+                </PrimaryButton>
+                <SecondaryButton href="#">View API reference</SecondaryButton>
+              </div>
             </div>
-          </div>
+          </Reveal>
 
-          <div className="overflow-hidden rounded-2xl border border-ink/10 bg-ink-900 shadow-sm">
-            <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
-              <span className="h-3 w-3 rounded-full bg-white/20" />
-              <span className="h-3 w-3 rounded-full bg-white/20" />
-              <span className="h-3 w-3 rounded-full bg-white/20" />
-              <span className="ml-2 font-mono text-xs text-white/40">subscribe.ts</span>
-            </div>
-            <pre className="overflow-x-auto p-5 text-[13px] leading-relaxed">
-              <code className="font-mono text-bone-200">{snippet}</code>
-            </pre>
-          </div>
+          <Reveal delay={140}>
+            <CodePanel filename="subscribe.ts" code={snippet} />
+          </Reveal>
         </div>
       </Container>
     </Section>

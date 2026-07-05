@@ -6,9 +6,10 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, Thead, Th, Tbody, Tr, Td } from '@/components/ui/table';
+import { Modal } from '@/components/ui/modal';
 import { api } from '@/lib/api';
 import { formatKobo, formatDate } from '@/lib/utils';
-import { Plus, X } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 interface Customer {
   id: string;
@@ -86,8 +87,8 @@ export default function CustomersPage() {
         </div>
 
         {error && (
-          <Card className="p-4 border-red-200 dark:border-red-900/50">
-            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+          <Card className="p-4 border-danger/30">
+            <p className="text-sm text-danger">{error}</p>
           </Card>
         )}
 
@@ -100,54 +101,54 @@ export default function CustomersPage() {
                 <Th>Email</Th>
                 <Th>External Ref</Th>
                 <Th>Phone</Th>
-                <Th>Balance</Th>
+                <Th className="text-right">Balance</Th>
                 <Th>Created</Th>
               </tr>
             </Thead>
             <Tbody>
               {loading ? (
                 <tr>
-                  <Td className="text-center text-gray-400 dark:text-slate-500 py-8">
+                  <Td className="text-center text-faint py-8">
                     Loading…
                   </Td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <Td className="text-center text-gray-400 dark:text-slate-500 py-8">
+                  <Td className="text-center text-faint py-8">
                     {customers.length === 0 ? 'No customers yet' : 'No matches'}
                   </Td>
                 </tr>
               ) : (
-                filtered.map((customer) => {
+                filtered.map((customer, i) => {
                   const balance = Number(customer.balance);
                   return (
-                    <Tr key={customer.id}>
+                    <Tr key={customer.id} className="animate-row-in" style={{ animationDelay: `${Math.min(i, 12) * 28}ms` }}>
                       <Td>
                         <Link
                           href={`/dashboard/customers/${customer.id}`}
-                          className="font-medium text-gray-900 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400"
+                          className="font-medium text-ink hover:text-jade-deep"
                         >
                           {customer.name}
                         </Link>
-                        <p className="text-xs text-gray-400 dark:text-slate-500 font-mono">{customer.id}</p>
+                        <p className="text-xs text-faint font-mono">{customer.id}</p>
                       </Td>
-                      <Td className="text-gray-500 dark:text-slate-400">{customer.email}</Td>
-                      <Td className="font-mono text-xs text-gray-500 dark:text-slate-400">{customer.external_ref}</Td>
-                      <Td className="text-gray-500 dark:text-slate-400">{customer.phone || '—'}</Td>
-                      <Td>
+                      <Td className="text-mid">{customer.email}</Td>
+                      <Td className="font-mono text-xs text-mid">{customer.external_ref}</Td>
+                      <Td className="text-mid">{customer.phone || '—'}</Td>
+                      <Td className="text-right">
                         {balance > 0 ? (
-                          <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                          <span className="font-mono text-[13px] font-medium text-jade-deep">
                             +{formatKobo(balance)}
                           </span>
                         ) : balance < 0 ? (
-                          <span className="text-red-500 font-medium">
+                          <span className="font-mono text-[13px] font-medium text-danger">
                             {formatKobo(balance)}
                           </span>
                         ) : (
-                          <span className="text-gray-400">—</span>
+                          <span className="text-faint">—</span>
                         )}
                       </Td>
-                      <Td className="text-gray-500 dark:text-slate-400">{formatDate(customer.created_at)}</Td>
+                      <Td className="text-mid">{formatDate(customer.created_at)}</Td>
                     </Tr>
                   );
                 })
@@ -158,23 +159,22 @@ export default function CustomersPage() {
 
         {/* Footer */}
         {!loading && (
-          <p className="text-xs text-gray-400 dark:text-slate-600">
+          <p className="text-xs text-faint">
             {customers.length} customer{customers.length === 1 ? '' : 's'} total
           </p>
         )}
       </div>
 
-      {showForm && (
-        <AddCustomerModal
-          onClose={() => setShowForm(false)}
-          onCreated={() => { setShowForm(false); load(); }}
-        />
-      )}
+      <AddCustomerModal
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        onCreated={() => { setShowForm(false); load(); }}
+      />
     </div>
   );
 }
 
-function AddCustomerModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+function AddCustomerModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [externalRef, setExternalRef] = useState('');
@@ -182,6 +182,16 @@ function AddCustomerModal({ onClose, onCreated }: { onClose: () => void; onCreat
   const [phone, setPhone] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setName('');
+    setEmail('');
+    setExternalRef('');
+    setExternalRefTouched(false);
+    setPhone('');
+    setError(null);
+  }, [open]);
 
   // Suggest an external_ref from the email/name until the user edits it.
   useEffect(() => {
@@ -215,51 +225,40 @@ function AddCustomerModal({ onClose, onCreated }: { onClose: () => void; onCreat
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <Card className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-slate-800">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-slate-100">New Customer</h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-200 transition-colors"
-          >
-            <X size={16} />
-          </button>
+    <Modal open={open} title="New customer" onClose={onClose}>
+      <form onSubmit={submit} className="space-y-4">
+        <div>
+          <label className="block text-xs font-medium text-mid mb-1">Name</label>
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Acme Inc." required />
         </div>
-        <form onSubmit={submit} className="px-6 py-4 space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Name</label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Acme Inc." required />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Email</label>
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="billing@acme.com" required />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">External Ref</label>
-            <Input
-              value={externalRef}
-              onChange={(e) => { setExternalRef(e.target.value); setExternalRefTouched(true); }}
-              placeholder="your-internal-id"
-              required
-            />
-            <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">Your merchant-side identifier for this customer.</p>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Phone <span className="text-gray-300 dark:text-slate-600">(optional)</span></label>
-            <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+234…" />
-          </div>
+        <div>
+          <label className="block text-xs font-medium text-mid mb-1">Email</label>
+          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="billing@acme.com" required />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-mid mb-1">External Ref</label>
+          <Input
+            value={externalRef}
+            onChange={(e) => { setExternalRef(e.target.value); setExternalRefTouched(true); }}
+            placeholder="your-internal-id"
+            required
+          />
+          <p className="text-xs text-faint mt-1">Your merchant-side identifier for this customer.</p>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-mid mb-1">Phone <span className="text-faint">(optional)</span></label>
+          <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+234…" />
+        </div>
 
-          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+        {error && <p className="text-sm text-danger">{error}</p>}
 
-          <div className="flex items-center justify-end gap-2 pt-2">
-            <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
-            <Button type="submit" disabled={!valid || submitting}>
-              {submitting ? 'Creating…' : 'Create customer'}
-            </Button>
-          </div>
-        </form>
-      </Card>
-    </div>
+        <div className="flex items-center justify-end gap-2 pt-1">
+          <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button type="submit" disabled={!valid || submitting}>
+            {submitting ? 'Creating…' : 'Create customer'}
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }

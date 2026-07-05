@@ -1,26 +1,51 @@
 import { cn } from '@/lib/utils';
 
-const stateStyles: Record<string, string> = {
-  active:        'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-  trialing:      'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  incomplete:    'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-  past_due:      'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  grace:         'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-  delinquent:    'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  canceled:      'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-400',
-  paused:        'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-400',
-  paid:          'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-  open:          'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  partially_paid:'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  void:          'bg-gray-100 text-gray-500 dark:bg-slate-800 dark:text-slate-400',
-  card:          'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
-  transfer:      'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
-  live:          'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-  test:          'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-  suspense:      'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  partial:       'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  delivered:     'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-  pending:       'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+/**
+ * Status chips — 10.5px mono uppercase, tinted fill + strong text (DESIGN.md).
+ * jade = money-good · warn = at-risk · danger = broken · info = in-flight · neutral = inert
+ */
+const tones = {
+  jade: 'bg-jade-tint text-jade-deep dark:text-jade-lite',
+  warn: 'bg-warn-tint text-warn',
+  danger: 'bg-danger-tint text-danger',
+  info: 'bg-info-tint text-info',
+  neutral: 'bg-soft text-mid',
+};
+
+const stateTone: Record<string, keyof typeof tones> = {
+  // money-good
+  active: 'jade',
+  paid: 'jade',
+  live: 'jade',
+  delivered: 'jade',
+  recovered: 'jade',
+  succeeded: 'jade',
+  sent: 'jade',
+  approved: 'jade',
+  // at-risk / waiting on money
+  past_due: 'warn',
+  grace: 'warn',
+  partially_paid: 'warn',
+  partial: 'warn',
+  pending: 'warn',
+  retrying: 'warn',
+  test: 'warn',
+  // broken
+  delinquent: 'danger',
+  suspense: 'danger',
+  failed: 'danger',
+  uncollectible: 'danger',
+  rejected: 'danger',
+  // in-flight
+  trialing: 'info',
+  open: 'info',
+  transfer: 'info',
+  // inert
+  incomplete: 'neutral',
+  canceled: 'neutral',
+  paused: 'neutral',
+  void: 'neutral',
+  card: 'neutral',
 };
 
 interface BadgeProps {
@@ -31,11 +56,13 @@ interface BadgeProps {
 
 export function Badge({ status, label, className }: BadgeProps) {
   return (
-    <span className={cn(
-      'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize',
-      stateStyles[status] ?? 'bg-gray-100 text-gray-600',
-      className,
-    )}>
+    <span
+      className={cn(
+        'inline-flex items-center whitespace-nowrap rounded-full px-2 py-[3px] font-mono text-[10.5px] font-medium uppercase tracking-[0.05em]',
+        tones[stateTone[status] ?? 'neutral'],
+        className,
+      )}
+    >
       {label ?? status.replace(/_/g, ' ')}
     </span>
   );

@@ -6,25 +6,30 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants = {
-  default:     'bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600',
-  outline:     'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-slate-700 dark:bg-transparent dark:text-slate-300 dark:hover:bg-slate-800',
-  ghost:       'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100',
-  destructive: 'bg-red-500 text-white hover:bg-red-600',
-  secondary:   'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700',
+  // jade = the accent; actions are the only place it gets to be loud
+  default: 'bg-jade text-white hover:bg-jade-deep shadow-[0_1px_2px_rgba(10,10,10,0.12)]',
+  outline: 'border border-line bg-card text-body hover:border-faint hover:text-ink',
+  ghost: 'text-mid hover:bg-soft hover:text-ink',
+  destructive: 'bg-danger-bar text-white hover:brightness-95',
+  secondary: 'bg-soft text-body hover:bg-line hover:text-ink',
 };
 
 const sizes = {
-  sm: 'px-3 py-1.5 text-xs',
-  md: 'px-4 py-2 text-sm',
-  lg: 'px-5 py-2.5 text-sm',
+  sm: 'h-8 px-3 text-xs',
+  md: 'h-9 px-4 text-[13.5px]',
+  lg: 'h-10 px-5 text-sm',
 };
 
 export function Button({ variant = 'default', size = 'md', className, children, ...props }: ButtonProps) {
   return (
     <button
       className={cn(
-        'inline-flex items-center gap-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed',
-        variants[variant], sizes[size], className,
+        'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-[background-color,border-color,color,transform,filter] duration-150',
+        'active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jade/40 focus-visible:ring-offset-1 focus-visible:ring-offset-canvas',
+        'disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100',
+        variants[variant],
+        sizes[size],
+        className,
       )}
       {...props}
     >

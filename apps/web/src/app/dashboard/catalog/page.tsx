@@ -9,7 +9,8 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { api } from '@/lib/api';
 import { formatKobo } from '@/lib/utils';
 import { cn } from '@/lib/utils';
-import { Plus, CheckCircle, X, Layers, FolderPlus, HelpCircle, Trash2, Archive } from 'lucide-react';
+import { Plus, CheckCircle, Layers, FolderPlus, HelpCircle, Trash2, Archive } from 'lucide-react';
+import { Modal } from '@/components/ui/modal';
 
 interface PlanGroup {
   id: string;
@@ -135,6 +136,11 @@ export default function CatalogPage() {
   const [deletePlan, setDeletePlan] = useState<Plan | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteErr, setDeleteErr] = useState<string | null>(null);
+  // Kept around during the close animation so the panel doesn't blank out mid-exit.
+  const [cachedDeletePlan, setCachedDeletePlan] = useState<Plan | null>(null);
+  useEffect(() => {
+    if (deletePlan) setCachedDeletePlan(deletePlan);
+  }, [deletePlan]);
 
   async function confirmDelete() {
     if (!deletePlan) return;
@@ -200,8 +206,8 @@ export default function CatalogPage() {
           <div>
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h2 className="text-sm font-semibold text-gray-900 dark:text-slate-100 mb-1">Core Plans</h2>
-                <p className="text-xs text-gray-500 dark:text-slate-400">Plans available to your customers</p>
+                <h2 className="text-sm font-semibold text-ink mb-1">Core Plans</h2>
+                <p className="text-xs text-mid">Plans available to your customers</p>
               </div>
               <Button
                 variant="outline"
@@ -216,25 +222,25 @@ export default function CatalogPage() {
             {loading && (
               <div className="space-y-3">
                 {[0, 1].map((i) => (
-                  <div key={i} className="h-28 rounded-xl bg-gray-100 dark:bg-slate-800 animate-pulse" />
+                  <div key={i} className="h-28 rounded-xl bg-soft animate-pulse" />
                 ))}
               </div>
             )}
 
             {!loading && error && (
               <Card className="p-5">
-                <p className="text-sm text-red-600 dark:text-red-400 mb-3">{error}</p>
+                <p className="text-sm text-danger mb-3">{error}</p>
                 <Button variant="outline" size="sm" onClick={loadCatalog}>Retry</Button>
               </Card>
             )}
 
             {!loading && !error && groups.length === 0 && (
               <Card className="p-8 text-center">
-                <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center mx-auto mb-3">
-                  <Layers size={20} className="text-indigo-600 dark:text-indigo-400" />
+                <div className="w-10 h-10 rounded-xl bg-jade-tint flex items-center justify-center mx-auto mb-3">
+                  <Layers size={20} className="text-jade-deep" />
                 </div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-slate-100">No plan groups yet</h3>
-                <p className="text-xs text-gray-500 dark:text-slate-400 mt-1 mb-4">
+                <h3 className="text-sm font-semibold text-ink">No plan groups yet</h3>
+                <p className="text-xs text-mid mt-1 mb-4">
                   Plans live inside plan groups. Create a plan group to get started.
                 </p>
                 <Button size="sm" onClick={() => setShowGroupModal(true)}>
@@ -251,35 +257,35 @@ export default function CatalogPage() {
                   return (
                     <div key={group.id}>
                       <div className="flex items-center gap-2 mb-2">
-                        <Layers size={14} className="text-gray-400 dark:text-slate-500 shrink-0" />
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-slate-100">{group.name}</h3>
-                        <span className="text-xs text-gray-400 dark:text-slate-500">
+                        <Layers size={14} className="text-faint shrink-0" />
+                        <h3 className="text-sm font-semibold text-ink">{group.name}</h3>
+                        <span className="text-xs text-faint">
                           {groupPlans.length} {groupPlans.length === 1 ? 'plan' : 'plans'}
                         </span>
                       </div>
                       {group.description && (
-                        <p className="text-xs text-gray-500 dark:text-slate-400 mb-3 ml-6">{group.description}</p>
+                        <p className="text-xs text-mid mb-3 ml-6">{group.description}</p>
                       )}
 
                       <div className="space-y-3">
                         {groupPlans.length === 0 ? (
-                          <p className="text-xs text-gray-400 dark:text-slate-500 ml-6">No plans in this group yet.</p>
+                          <p className="text-xs text-faint ml-6">No plans in this group yet.</p>
                         ) : (
                           groupPlans.map((plan) => (
                             <Card key={plan.id} className="p-5">
                               <div className="flex items-start justify-between mb-3">
                                 <div>
-                                  <h4 className="text-sm font-semibold text-gray-900 dark:text-slate-100">{plan.name}</h4>
-                                  <p className="text-xl font-semibold text-gray-900 dark:text-slate-50 mt-1">
+                                  <h4 className="text-sm font-semibold text-ink">{plan.name}</h4>
+                                  <p className="font-mono text-xl font-semibold text-ink mt-1">
                                     {formatKobo(Number(plan.amount_minor))}
-                                    <span className="text-sm font-normal text-gray-400 dark:text-slate-500"> / {plan.interval}</span>
+                                    <span className="text-sm font-normal font-sans text-faint"> / {plan.interval}</span>
                                   </p>
                                 </div>
                                 <div className="flex items-center gap-1.5">
                                   <Button variant="outline" size="sm" onClick={() => setEditingPlan(plan)}>Edit</Button>
                                   <button
                                     onClick={() => { setDeletePlan(plan); setDeleteErr(null); }}
-                                    className="rounded-lg border border-gray-200 p-1.5 text-gray-400 hover:border-red-300 hover:text-red-500 dark:border-slate-700 dark:hover:border-red-800"
+                                    className="rounded-lg border border-line p-1.5 text-faint hover:border-danger/40 hover:text-danger"
                                     title="Archive or delete plan"
                                   >
                                     <Trash2 size={14} />
@@ -294,7 +300,7 @@ export default function CatalogPage() {
                                   <Badge status="trialing" label={`${plan.trial_period_days}-day trial`} />
                                 )}
                                 {plan.lookup_key && (
-                                  <span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] text-gray-600 dark:bg-slate-800 dark:text-slate-400">
+                                  <span className="rounded bg-soft px-1.5 py-0.5 font-mono text-[10px] text-mid">
                                     {plan.lookup_key}
                                   </span>
                                 )}
@@ -319,14 +325,14 @@ export default function CatalogPage() {
 
           {/* Right: Presets */}
           <div>
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-slate-100 mb-1">Billing Presets</h2>
-            <p className="text-xs text-gray-500 dark:text-slate-400 mb-2">
+            <h2 className="text-sm font-semibold text-ink mb-1">Billing Presets</h2>
+            <p className="text-xs text-mid mb-2">
               Apply a preset to configure all your billing policy knobs at once
             </p>
             {policy && (
-              <p className="text-xs text-gray-500 dark:text-slate-400 mb-4">
+              <p className="text-xs text-mid mb-4">
                 Current activation:{' '}
-                <span className="font-medium text-gray-700 dark:text-slate-300">
+                <span className="font-medium text-body">
                   {policy.activation_strategy === 'charge_to_activate'
                     ? 'Strict — charge before access'
                     : 'Optimistic — access while billing'}
@@ -345,20 +351,20 @@ export default function CatalogPage() {
                     key={preset.id}
                     className={cn(
                       'p-4',
-                      isActive && 'border-emerald-200 dark:border-emerald-800 bg-emerald-50/30 dark:bg-emerald-950/20',
+                      isActive && 'border-jade/20 bg-jade-tint/40',
                     )}
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        {isActive && <CheckCircle size={14} className="text-emerald-500" />}
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-slate-100">{preset.name}</h3>
+                        {isActive && <CheckCircle size={14} className="text-jade" />}
+                        <h3 className="text-sm font-semibold text-ink">{preset.name}</h3>
                         {preset.recommended && (
-                          <span className="text-xs bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 px-1.5 py-0.5 rounded font-medium">
+                          <span className="text-xs bg-jade-tint text-jade-deep px-1.5 py-0.5 rounded font-medium">
                             recommended
                           </span>
                         )}
                         {isActive && (
-                          <span className="text-xs bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 px-1.5 py-0.5 rounded font-medium">
+                          <span className="text-xs bg-jade-tint text-jade-deep px-1.5 py-0.5 rounded font-medium">
                             active
                           </span>
                         )}
@@ -366,14 +372,14 @@ export default function CatalogPage() {
                     </div>
                     <ul className="space-y-1 mb-3">
                       {preset.description.map((d) => (
-                        <li key={d} className="text-xs text-gray-500 dark:text-slate-400">· {d}</li>
+                        <li key={d} className="text-xs text-mid">· {d}</li>
                       ))}
                     </ul>
                     {!isActive && (
                       <div>
                         {isPending ? (
                           <div className="flex items-center gap-2">
-                            <p className="text-xs text-amber-700 dark:text-amber-400 flex-1">
+                            <p className="text-xs text-warn flex-1">
                               This will update your billing policy. Continue?
                             </p>
                             <Button size="sm" disabled={applyingPreset} onClick={() => applyPreset(preset.id)}>{applyingPreset ? 'Applying…' : 'Confirm'}</Button>
@@ -394,101 +400,59 @@ export default function CatalogPage() {
         </div>
       </div>
 
-      {showGroupModal && (
-        <AddPlanGroupModal
-          onClose={() => setShowGroupModal(false)}
-          onCreated={() => {
-            setShowGroupModal(false);
-            loadCatalog(); // soft refresh — pull the full record back
-          }}
-        />
-      )}
+      <AddPlanGroupModal
+        open={showGroupModal}
+        onClose={() => setShowGroupModal(false)}
+        onCreated={() => {
+          setShowGroupModal(false);
+          loadCatalog(); // soft refresh — pull the full record back
+        }}
+      />
 
-      {showPlanModal && (
-        <AddPlanModal
-          groups={groups}
-          onClose={() => setShowPlanModal(false)}
-          onCreated={() => {
-            setShowPlanModal(false);
-            loadCatalog(); // soft refresh — the create response lacks group/interval fields
-          }}
-        />
-      )}
+      <AddPlanModal
+        open={showPlanModal}
+        groups={groups}
+        onClose={() => setShowPlanModal(false)}
+        onCreated={() => {
+          setShowPlanModal(false);
+          loadCatalog(); // soft refresh — the create response lacks group/interval fields
+        }}
+      />
 
-      {editingPlan && (
-        <EditPlanModal
-          plan={editingPlan}
-          onClose={() => setEditingPlan(null)}
-          onSaved={(updated) => {
-            setPlans((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
-            setEditingPlan(null);
-          }}
-        />
-      )}
+      <EditPlanModal
+        open={!!editingPlan}
+        plan={editingPlan}
+        onClose={() => setEditingPlan(null)}
+        onSaved={(updated) => {
+          setPlans((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+          setEditingPlan(null);
+        }}
+      />
 
-      {deletePlan && (
-        <ModalShell
-          title={`Delete “${deletePlan.name}”?`}
-          subtitle="Plans with subscribers are archived, not deleted."
-          icon={<Trash2 size={20} className="text-red-500" />}
-          onClose={() => setDeletePlan(null)}
-        >
-          <div className="space-y-3">
-            <div className="flex items-start gap-2.5 rounded-lg bg-amber-50 px-3 py-2.5 dark:bg-amber-950/30">
-              <Archive size={15} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
-              <p className="text-xs leading-relaxed text-amber-800 dark:text-amber-300">
-                If anyone is subscribed, the plan is <strong>archived</strong> — existing subscribers keep billing and
-                history is preserved; it just stops accepting new sign-ups. Only a never-subscribed plan is permanently deleted.
-              </p>
-            </div>
-            {deleteErr && <p className="text-xs text-red-600 dark:text-red-400">{deleteErr}</p>}
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="ghost" size="sm" onClick={() => setDeletePlan(null)}>Cancel</Button>
-              <Button type="button" variant="destructive" size="sm" disabled={deleting} onClick={confirmDelete}>
-                {deleting ? 'Working…' : 'Delete / Archive'}
-              </Button>
-            </div>
+      <Modal
+        open={!!deletePlan}
+        title={cachedDeletePlan ? `Delete “${cachedDeletePlan.name}”?` : ''}
+        subtitle="Plans with subscribers are archived, not deleted."
+        icon={<Trash2 size={20} className="text-danger" />}
+        onClose={() => setDeletePlan(null)}
+      >
+        <div className="space-y-3">
+          <div className="flex items-start gap-2.5 rounded-lg bg-warn-tint px-3 py-2.5">
+            <Archive size={15} className="mt-0.5 shrink-0 text-warn" />
+            <p className="text-xs leading-relaxed text-warn">
+              If anyone is subscribed, the plan is <strong>archived</strong> — existing subscribers keep billing and
+              history is preserved; it just stops accepting new sign-ups. Only a never-subscribed plan is permanently deleted.
+            </p>
           </div>
-        </ModalShell>
-      )}
-    </div>
-  );
-}
-
-function ModalShell({
-  title,
-  subtitle,
-  icon,
-  onClose,
-  children,
-}: {
-  title: string;
-  subtitle?: string;
-  icon: React.ReactNode;
-  onClose: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-slate-800 p-6 space-y-5">
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center mb-3">
-              {icon}
-            </div>
-            <h2 className="text-base font-semibold text-gray-900 dark:text-slate-100">{title}</h2>
-            {subtitle && <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{subtitle}</p>}
+          {deleteErr && <p className="text-xs text-danger">{deleteErr}</p>}
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" size="sm" onClick={() => setDeletePlan(null)}>Cancel</Button>
+            <Button type="button" variant="destructive" size="sm" disabled={deleting} onClick={confirmDelete}>
+              {deleting ? 'Working…' : 'Delete / Archive'}
+            </Button>
           </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-300 mt-1"
-          >
-            <X size={18} />
-          </button>
         </div>
-        {children}
-      </div>
+      </Modal>
     </div>
   );
 }
@@ -497,10 +461,10 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   return (
     <label className="block">
       <span className="flex items-center gap-1 mb-1">
-        <span className="text-xs font-medium text-gray-700 dark:text-slate-300">{label}</span>
+        <span className="text-xs font-medium text-body">{label}</span>
         {hint && (
           <Tooltip content={hint}>
-            <HelpCircle size={12} className="text-gray-400 dark:text-slate-500 cursor-help" />
+            <HelpCircle size={12} className="text-faint cursor-help" />
           </Tooltip>
         )}
       </span>
@@ -510,9 +474,11 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 }
 
 function AddPlanGroupModal({
+  open,
   onClose,
   onCreated,
 }: {
+  open: boolean;
   onClose: () => void;
   onCreated: (group: PlanGroup) => void;
 }) {
@@ -520,6 +486,13 @@ function AddPlanGroupModal({
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setName('');
+    setDescription('');
+    setErr(null);
+  }, [open]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -539,10 +512,11 @@ function AddPlanGroupModal({
   }
 
   return (
-    <ModalShell
+    <Modal
+      open={open}
       title="Add plan group"
       subtitle="A container that groups related plans together"
-      icon={<FolderPlus size={20} className="text-indigo-600 dark:text-indigo-400" />}
+      icon={<FolderPlus size={20} className="text-jade-deep" />}
       onClose={onClose}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -562,7 +536,7 @@ function AddPlanGroupModal({
             placeholder="What is this group for?"
           />
         </Field>
-        {err && <p className="text-xs text-red-600 dark:text-red-400">{err}</p>}
+        {err && <p className="text-xs text-danger">{err}</p>}
         <div className="flex justify-end gap-2 pt-1">
           <Button type="button" variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
           <Button type="submit" size="sm" disabled={submitting || !name.trim()}>
@@ -570,15 +544,17 @@ function AddPlanGroupModal({
           </Button>
         </div>
       </form>
-    </ModalShell>
+    </Modal>
   );
 }
 
 function AddPlanModal({
+  open,
   groups,
   onClose,
   onCreated,
 }: {
+  open: boolean;
   groups: PlanGroup[];
   onClose: () => void;
   onCreated: (plan: Plan) => void;
@@ -593,8 +569,20 @@ function AddPlanModal({
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!open) return;
+    setPlanGroupId(groups[0]?.id ?? '');
+    setName('');
+    setAmountNaira('');
+    setInterval('month');
+    setIntervalCount('1');
+    setTrialDays('0');
+    setLookupKey('');
+    setErr(null);
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const selectClass =
-    'w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100';
+    'w-full h-9 rounded-lg border border-line bg-card px-3 text-[13.5px] text-ink focus:outline-none focus:border-jade focus:ring-2 focus:ring-jade/25';
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -620,10 +608,11 @@ function AddPlanModal({
   }
 
   return (
-    <ModalShell
+    <Modal
+      open={open}
       title="Add plan"
       subtitle="Create a billable plan inside a plan group"
-      icon={<Plus size={20} className="text-indigo-600 dark:text-indigo-400" />}
+      icon={<Plus size={20} className="text-jade-deep" />}
       onClose={onClose}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -699,7 +688,7 @@ function AddPlanModal({
             required
           />
         </Field>
-        {err && <p className="text-xs text-red-600 dark:text-red-400">{err}</p>}
+        {err && <p className="text-xs text-danger">{err}</p>}
         <div className="flex justify-end gap-2 pt-1">
           <Button type="button" variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
           <Button
@@ -711,38 +700,53 @@ function AddPlanModal({
           </Button>
         </div>
       </form>
-    </ModalShell>
+    </Modal>
   );
 }
 
 function EditPlanModal({
+  open,
   plan,
   onClose,
   onSaved,
 }: {
-  plan: Plan;
+  open: boolean;
+  plan: Plan | null;
   onClose: () => void;
   onSaved: (plan: Plan) => void;
 }) {
-  const [name, setName] = useState(plan.name);
-  const [amountNaira, setAmountNaira] = useState(String(Number(plan.amount_minor) / 100));
-  const [interval, setInterval] = useState<BillingInterval>(plan.interval as BillingInterval);
-  const [intervalCount, setIntervalCount] = useState(String(plan.interval_count));
-  const [trialDays, setTrialDays] = useState(String(plan.trial_period_days));
+  const [cached, setCached] = useState<Plan | null>(null);
+  const [name, setName] = useState('');
+  const [amountNaira, setAmountNaira] = useState('');
+  const [interval, setInterval] = useState<BillingInterval>('month');
+  const [intervalCount, setIntervalCount] = useState('1');
+  const [trialDays, setTrialDays] = useState('0');
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!plan) return;
+    setCached(plan);
+    setName(plan.name);
+    setAmountNaira(String(Number(plan.amount_minor) / 100));
+    setInterval(plan.interval as BillingInterval);
+    setIntervalCount(String(plan.interval_count));
+    setTrialDays(String(plan.trial_period_days));
+    setErr(null);
+  }, [plan]);
+
   const selectClass =
-    'w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100';
+    'w-full h-9 rounded-lg border border-line bg-card px-3 text-[13.5px] text-ink focus:outline-none focus:border-jade focus:ring-2 focus:ring-jade/25';
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!cached) return;
     const amount = Number(amountNaira);
     if (!name.trim() || !(amount > 0)) return;
     setSubmitting(true);
     setErr(null);
     try {
-      const updated = (await api.plans.update(plan.id, {
+      const updated = (await api.plans.update(cached.id, {
         name: name.trim(),
         amount_minor: Math.round(amount * 100),
         billing_interval: interval,
@@ -757,50 +761,53 @@ function EditPlanModal({
   }
 
   return (
-    <ModalShell
+    <Modal
+      open={open}
       title="Edit plan"
       subtitle="Changes apply to future billing; existing subscriptions keep their current period until renewal."
-      icon={<Plus size={20} className="text-indigo-600 dark:text-indigo-400" />}
+      icon={<Plus size={20} className="text-jade-deep" />}
       onClose={onClose}
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <Field label="Name">
-          <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus required />
-        </Field>
-        <Field label="Amount (₦)" hint="What each customer is charged every billing cycle, in naira. Stored internally in kobo.">
-          <Input
-            type="number"
-            min="0"
-            step="0.01"
-            value={amountNaira}
-            onChange={(e) => setAmountNaira(e.target.value)}
-            required
-          />
-        </Field>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Billing interval" hint="How often the customer is charged — daily, weekly, monthly, or yearly.">
-            <select value={interval} onChange={(e) => setInterval(e.target.value as BillingInterval)} className={selectClass}>
-              <option value="day">Day</option>
-              <option value="week">Week</option>
-              <option value="month">Month</option>
-              <option value="year">Year</option>
-            </select>
+      {cached && (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Field label="Name">
+            <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus required />
           </Field>
-          <Field label="Interval count" hint="Multiplies the interval. e.g. interval Month × count 3 = billed once every 3 months. Leave at 1 for a standard cycle.">
-            <Input type="number" min="1" step="1" value={intervalCount} onChange={(e) => setIntervalCount(e.target.value)} />
+          <Field label="Amount (₦)" hint="What each customer is charged every billing cycle, in naira. Stored internally in kobo.">
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              value={amountNaira}
+              onChange={(e) => setAmountNaira(e.target.value)}
+              required
+            />
           </Field>
-        </div>
-        <Field label="Trial period (days)" hint="Free days before the first charge. The subscription stays in 'trialing' until it converts. 0 = charge immediately.">
-          <Input type="number" min="0" step="1" value={trialDays} onChange={(e) => setTrialDays(e.target.value)} />
-        </Field>
-        {err && <p className="text-xs text-red-600 dark:text-red-400">{err}</p>}
-        <div className="flex justify-end gap-2 pt-1">
-          <Button type="button" variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
-          <Button type="submit" size="sm" disabled={submitting || !name.trim() || !(Number(amountNaira) > 0)}>
-            {submitting ? 'Saving…' : 'Save changes'}
-          </Button>
-        </div>
-      </form>
-    </ModalShell>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Billing interval" hint="How often the customer is charged — daily, weekly, monthly, or yearly.">
+              <select value={interval} onChange={(e) => setInterval(e.target.value as BillingInterval)} className={selectClass}>
+                <option value="day">Day</option>
+                <option value="week">Week</option>
+                <option value="month">Month</option>
+                <option value="year">Year</option>
+              </select>
+            </Field>
+            <Field label="Interval count" hint="Multiplies the interval. e.g. interval Month × count 3 = billed once every 3 months. Leave at 1 for a standard cycle.">
+              <Input type="number" min="1" step="1" value={intervalCount} onChange={(e) => setIntervalCount(e.target.value)} />
+            </Field>
+          </div>
+          <Field label="Trial period (days)" hint="Free days before the first charge. The subscription stays in 'trialing' until it converts. 0 = charge immediately.">
+            <Input type="number" min="0" step="1" value={trialDays} onChange={(e) => setTrialDays(e.target.value)} />
+          </Field>
+          {err && <p className="text-xs text-danger">{err}</p>}
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
+            <Button type="submit" size="sm" disabled={submitting || !name.trim() || !(Number(amountNaira) > 0)}>
+              {submitting ? 'Saving…' : 'Save changes'}
+            </Button>
+          </div>
+        </form>
+      )}
+    </Modal>
   );
 }

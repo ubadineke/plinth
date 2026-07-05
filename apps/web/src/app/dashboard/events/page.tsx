@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Topbar } from '@/components/layout/topbar';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -7,15 +8,15 @@ import { Button } from '@/components/ui/button';
 import { MOCK_EVENTS } from '@/lib/mock-data';
 import { formatRelativeDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
-import { RefreshCw, ChevronDown, ChevronRight } from 'lucide-react';
+import { RefreshCw, ChevronRight } from 'lucide-react';
 
 function getEventFamilyColor(type: string): string {
-  if (type.startsWith('invoice.')) return 'text-emerald-600 dark:text-emerald-400';
-  if (type.startsWith('transfer.')) return 'text-blue-600 dark:text-blue-400';
-  if (type.includes('past_due') || type.includes('grace')) return 'text-amber-600 dark:text-amber-400';
-  if (type.includes('delinquent')) return 'text-red-600 dark:text-red-400';
-  if (type.startsWith('subscription.')) return 'text-indigo-600 dark:text-indigo-400';
-  return 'text-gray-600 dark:text-slate-400';
+  if (type.startsWith('invoice.')) return 'text-jade-deep';
+  if (type.startsWith('transfer.')) return 'text-info';
+  if (type.includes('past_due') || type.includes('grace')) return 'text-warn';
+  if (type.includes('delinquent')) return 'text-danger';
+  if (type.startsWith('subscription.')) return 'text-jade-deep';
+  return 'text-mid';
 }
 
 const MOCK_PAYLOAD: Record<string, object> = {
@@ -37,6 +38,7 @@ export default function EventsPage() {
   const [showUndelivered, setShowUndelivered] = useState(false);
   const [liveMode, setLiveMode] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const reduce = useReducedMotion();
 
   const events = showUndelivered
     ? MOCK_EVENTS.filter((e) => !e.delivered)
@@ -64,8 +66,8 @@ export default function EventsPage() {
               className={cn(
                 'text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors',
                 showUndelivered
-                  ? 'bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-400'
-                  : 'border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800',
+                  ? 'bg-warn-tint border-warn/20 text-warn'
+                  : 'border-line text-mid hover:bg-soft',
               )}
             >
               {showUndelivered ? 'All events' : 'Undelivered only'}
@@ -76,20 +78,20 @@ export default function EventsPage() {
             className={cn(
               'flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors',
               liveMode
-                ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/30 dark:border-emerald-800 dark:text-emerald-400'
-                : 'border-gray-200 text-gray-600 dark:border-slate-700 dark:text-slate-400',
+                ? 'bg-jade-tint border-jade/20 text-jade-deep'
+                : 'border-line text-mid',
             )}
           >
-            <span className={cn('w-1.5 h-1.5 rounded-full', liveMode ? 'bg-emerald-500 animate-pulse' : 'bg-gray-300 dark:bg-slate-600')} />
+            <span className={cn('w-1.5 h-1.5 rounded-full', liveMode ? 'bg-jade animate-pulse' : 'bg-faint')} />
             {liveMode ? 'Live' : 'Paused'}
           </button>
         </div>
 
         {/* Events list */}
-        <Card className="divide-y divide-gray-50 dark:divide-slate-800">
+        <Card className="divide-y divide-line/70">
           {events.length === 0 ? (
             <div className="py-16 text-center">
-              <p className="text-sm text-gray-400 dark:text-slate-500">No undelivered events</p>
+              <p className="text-sm text-faint">No undelivered events</p>
             </div>
           ) : (
             events.map((evt) => {
@@ -98,25 +100,27 @@ export default function EventsPage() {
               return (
                 <div key={evt.id}>
                   <div
-                    className="px-4 py-3 flex items-center gap-4 hover:bg-gray-50/50 dark:hover:bg-slate-800/30 cursor-pointer"
+                    className="px-4 py-3 flex items-center gap-4 hover:bg-soft/60 cursor-pointer"
                     onClick={() => toggleExpand(evt.id)}
                   >
-                    {isExpanded ? (
-                      <ChevronDown size={14} className="text-gray-400 shrink-0" />
-                    ) : (
-                      <ChevronRight size={14} className="text-gray-400 shrink-0" />
-                    )}
+                    <motion.span
+                      animate={{ rotate: isExpanded ? 90 : 0 }}
+                      transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 400, damping: 25 }}
+                      className="text-faint shrink-0"
+                    >
+                      <ChevronRight size={14} />
+                    </motion.span>
                     <code className={cn('text-xs font-mono flex-1 truncate', getEventFamilyColor(evt.type))}>
                       {evt.type}
                     </code>
-                    <span className="text-xs font-mono text-gray-400 dark:text-slate-500 shrink-0">
+                    <span className="text-xs font-mono text-faint shrink-0">
                       {evt.resourceId}
                     </span>
                     <Badge
                       status={evt.delivered ? 'delivered' : 'pending'}
                       label={evt.delivered ? 'delivered' : 'pending'}
                     />
-                    <span className="text-xs text-gray-400 dark:text-slate-500 whitespace-nowrap shrink-0">
+                    <span className="text-xs text-faint whitespace-nowrap shrink-0">
                       {formatRelativeDate(evt.occurredAt)}
                     </span>
                     {!evt.delivered && (
@@ -131,20 +135,28 @@ export default function EventsPage() {
                       </Button>
                     )}
                   </div>
-                  {isExpanded && payload && (
-                    <div className="px-4 pb-4 bg-gray-50 dark:bg-slate-800/30">
-                      <pre className="text-xs font-mono text-gray-600 dark:text-slate-300 overflow-x-auto p-3 bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-lg">
-                        {JSON.stringify(payload, null, 2)}
-                      </pre>
-                    </div>
-                  )}
+                  <AnimatePresence initial={false}>
+                    {isExpanded && payload && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={reduce ? { duration: 0 } : { type: 'spring', visualDuration: 0.3, bounce: 0.1 }}
+                        className="overflow-hidden bg-soft"
+                      >
+                        <pre className="text-xs font-mono text-body overflow-x-auto p-3 m-4 mt-0 bg-card border border-line rounded-lg">
+                          {JSON.stringify(payload, null, 2)}
+                        </pre>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               );
             })
           )}
         </Card>
 
-        <p className="text-xs text-gray-400 dark:text-slate-600">
+        <p className="text-xs text-faint">
           {events.length} event{events.length !== 1 ? 's' : ''}
           {showUndelivered ? ' undelivered' : ' total'}
         </p>

@@ -35,17 +35,17 @@ function daysBetween(from: Date, to: Date): number {
 function GraceDaysBar({ daysRemaining, graceDays }: { daysRemaining: number; graceDays: number }) {
   const used = graceDays - daysRemaining;
   const pct = Math.min(Math.max((used / Math.max(graceDays, 1)) * 100, 0), 100);
-  const color = daysRemaining <= 2 ? 'bg-red-500' : daysRemaining <= Math.ceil(graceDays / 2) ? 'bg-orange-400' : 'bg-gray-300';
+  const color = daysRemaining <= 2 ? 'bg-danger-bar' : daysRemaining <= Math.ceil(graceDays / 2) ? 'bg-warn-bar' : 'bg-faint';
   return (
     <div className="mt-2">
-      <div className="flex justify-between text-xs text-gray-500 dark:text-slate-400 mb-1">
+      <div className="flex justify-between text-xs text-mid mb-1">
         <span>Grace period</span>
-        <span className={cn(daysRemaining <= 2 ? 'text-red-500 font-medium' : daysRemaining <= Math.ceil(graceDays / 2) ? 'text-orange-500' : '')}>
+        <span className={cn('font-mono', daysRemaining <= 2 ? 'text-danger font-medium' : daysRemaining <= Math.ceil(graceDays / 2) ? 'text-warn' : '')}>
           {Math.max(daysRemaining, 0)}d remaining
         </span>
       </div>
-      <div className="h-1.5 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
-        <div className={cn('h-full rounded-full transition-all', color)} style={{ width: `${pct}%` }} />
+      <div className="h-1.5 bg-soft rounded-full overflow-hidden">
+        <div className={cn('h-full rounded-full transition-all duration-500 ease-brand', color)} style={{ width: `${pct}%` }} />
       </div>
     </div>
   );
@@ -141,45 +141,45 @@ export default function DunningPage() {
       <div className="p-6 space-y-6">
         {/* Metrics strip */}
         <div className="flex gap-4 flex-wrap">
-          <div className="flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900 rounded-lg">
-            <span className="text-sm font-semibold text-red-700 dark:text-red-400">{formatKobo(totalAtRisk)}</span>
-            <span className="text-xs text-red-600 dark:text-red-500">at risk in dunning</span>
+          <div className="flex items-center gap-2 px-4 py-2 bg-danger-tint border border-danger/15 rounded-lg">
+            <span className="text-sm font-mono font-semibold text-danger">{formatKobo(totalAtRisk)}</span>
+            <span className="text-xs text-danger">at risk in dunning</span>
           </div>
-          <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900 rounded-lg">
-            <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">{recovered.length}</span>
-            <span className="text-xs text-emerald-600 dark:text-emerald-500">recovered recently</span>
+          <div className="flex items-center gap-2 px-4 py-2 bg-jade-tint border border-jade/15 rounded-lg">
+            <span className="text-sm font-mono font-semibold text-jade-deep">{recovered.length}</span>
+            <span className="text-xs text-jade-deep">recovered recently</span>
           </div>
         </div>
 
         {loading ? (
-          <div className="py-16 text-center"><p className="text-sm text-gray-400 dark:text-slate-500">Loading dunning board…</p></div>
+          <div className="py-16 text-center"><p className="text-sm text-faint">Loading dunning board…</p></div>
         ) : error ? (
-          <div className="py-16 text-center"><p className="text-sm text-red-500 dark:text-red-400">{error}</p></div>
+          <div className="py-16 text-center"><p className="text-sm text-danger">{error}</p></div>
         ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
 
           {/* Past Due */}
           <div className="flex flex-col">
             <div className="flex items-center gap-2 mb-3">
-              <span className="w-2 h-2 rounded-full bg-amber-400" />
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">Past Due ({pastDue.length})</h3>
+              <span className="w-2 h-2 rounded-full bg-warn-bar" />
+              <h3 className="label-mono text-warn">Past Due ({pastDue.length})</h3>
             </div>
             <div className="space-y-3">
-              {pastDue.length === 0 && <p className="text-xs text-gray-400 dark:text-slate-600">Nothing past due</p>}
-              {pastDue.map((s) => {
+              {pastDue.length === 0 && <p className="text-xs text-faint">Nothing past due</p>}
+              {pastDue.map((s, i) => {
                 const decline = str(s.metadata, 'declineCode');
                 const nextRetry = str(s.metadata, 'dunningNextRetryAt');
                 return (
-                  <Card key={s.id} className="p-4">
-                    <p className="text-sm font-medium text-gray-900 dark:text-slate-100">{names[s.customer_id] ?? s.customer_id}</p>
-                    <p className="text-xs text-gray-400 dark:text-slate-500">{planName(s)} · {formatKobo(amountOf(s))}</p>
+                  <Card key={s.id} className="p-4 animate-row-in" style={{ animationDelay: `${i * 40}ms` }}>
+                    <p className="text-sm font-medium text-ink">{names[s.customer_id] ?? s.customer_id}</p>
+                    <p className="text-xs text-mid">{planName(s)} · <span className="font-mono">{formatKobo(amountOf(s))}</span></p>
                     {decline && (
                       <div className="mt-2">
-                        <span className="text-xs px-2 py-0.5 rounded font-mono font-medium bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400">{decline}</span>
+                        <span className="label-mono px-2 py-0.5 rounded-full bg-danger-tint text-danger">{decline}</span>
                       </div>
                     )}
                     {nextRetry && (
-                      <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">Retries in {Math.max(daysBetween(now, new Date(nextRetry)), 0)}d</p>
+                      <p className="text-xs text-mid mt-1">Retries in {Math.max(daysBetween(now, new Date(nextRetry)), 0)}d</p>
                     )}
                     <ReminderButton customerId={s.customer_id} />
                   </Card>
@@ -191,19 +191,19 @@ export default function DunningPage() {
           {/* Grace Period */}
           <div className="flex flex-col">
             <div className="flex items-center gap-2 mb-3">
-              <span className="w-2 h-2 rounded-full bg-orange-400" />
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-orange-700 dark:text-orange-400">Grace Period ({grace.length})</h3>
+              <span className="w-2 h-2 rounded-full bg-warn-bar" />
+              <h3 className="label-mono text-warn">Grace Period ({grace.length})</h3>
             </div>
             <div className="space-y-3">
-              {grace.length === 0 && <p className="text-xs text-gray-400 dark:text-slate-600">Nobody in grace</p>}
-              {grace.map((s) => {
+              {grace.length === 0 && <p className="text-xs text-faint">Nobody in grace</p>}
+              {grace.map((s, i) => {
                 const enteredGrace = str(s.metadata, 'enteredGraceAt');
                 const daysRemaining = enteredGrace ? graceDays - daysBetween(new Date(enteredGrace), now) : graceDays;
                 return (
-                  <Card key={s.id} className="p-4">
-                    <p className="text-sm font-medium text-gray-900 dark:text-slate-100">{names[s.customer_id] ?? s.customer_id}</p>
-                    <p className="text-xs text-gray-400 dark:text-slate-500">{planName(s)} · {formatKobo(amountOf(s))}</p>
-                    {enteredGrace && <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">Entered grace {formatDate(enteredGrace)}</p>}
+                  <Card key={s.id} className="p-4 animate-row-in" style={{ animationDelay: `${i * 40}ms` }}>
+                    <p className="text-sm font-medium text-ink">{names[s.customer_id] ?? s.customer_id}</p>
+                    <p className="text-xs text-mid">{planName(s)} · <span className="font-mono">{formatKobo(amountOf(s))}</span></p>
+                    {enteredGrace && <p className="text-xs text-mid mt-1">Entered grace {formatDate(enteredGrace)}</p>}
                     <GraceDaysBar daysRemaining={daysRemaining} graceDays={graceDays} />
                     <ReminderButton customerId={s.customer_id} />
                   </Card>
@@ -215,19 +215,19 @@ export default function DunningPage() {
           {/* Delinquent */}
           <div className="flex flex-col">
             <div className="flex items-center gap-2 mb-3">
-              <span className="w-2 h-2 rounded-full bg-red-500" />
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-red-700 dark:text-red-400">Delinquent ({delinquent.length})</h3>
+              <span className="w-2 h-2 rounded-full bg-danger-bar" />
+              <h3 className="label-mono text-danger">Delinquent ({delinquent.length})</h3>
             </div>
             <div className="space-y-3">
-              {delinquent.length === 0 && <p className="text-xs text-gray-400 dark:text-slate-600">Nobody delinquent</p>}
-              {delinquent.map((s) => {
+              {delinquent.length === 0 && <p className="text-xs text-faint">Nobody delinquent</p>}
+              {delinquent.map((s, i) => {
                 const since = str(s.metadata, 'enteredDelinquentAt');
                 return (
-                  <Card key={s.id} className="p-4 border-red-200 dark:border-red-900">
-                    <p className="text-sm font-medium text-gray-900 dark:text-slate-100">{names[s.customer_id] ?? s.customer_id}</p>
-                    <p className="text-xs text-gray-400 dark:text-slate-500 mb-2">{planName(s)}</p>
-                    <p className="text-base font-semibold text-red-600 dark:text-red-400">{formatKobo(amountOf(s))} owed</p>
-                    {since && <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">Since {formatDate(since)}</p>}
+                  <Card key={s.id} className="p-4 border-danger/25 animate-row-in" style={{ animationDelay: `${i * 40}ms` }}>
+                    <p className="text-sm font-medium text-ink">{names[s.customer_id] ?? s.customer_id}</p>
+                    <p className="text-xs text-mid mb-2">{planName(s)}</p>
+                    <p className="text-base font-mono font-semibold text-danger">{formatKobo(amountOf(s))} owed</p>
+                    {since && <p className="text-xs text-faint mt-1">Since {formatDate(since)}</p>}
                     <ReminderButton customerId={s.customer_id} />
                   </Card>
                 );
@@ -238,16 +238,16 @@ export default function DunningPage() {
           {/* Recovered */}
           <div className="flex flex-col">
             <div className="flex items-center gap-2 mb-3">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">Recovered ({recovered.length})</h3>
+              <span className="w-2 h-2 rounded-full bg-jade" />
+              <h3 className="label-mono text-jade-deep">Recovered ({recovered.length})</h3>
             </div>
             <div className="space-y-3">
-              {recovered.length === 0 && <p className="text-xs text-gray-400 dark:text-slate-600">No recent recoveries</p>}
-              {recovered.map((n) => (
-                <Card key={n.id} className="p-4 border-emerald-100 dark:border-emerald-900">
-                  <p className="text-sm font-medium text-gray-900 dark:text-slate-100">{names[n.customer_id] ?? n.customer_id}</p>
-                  <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">Payment recovered</p>
-                  <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">{formatDate(n.created_at)}</p>
+              {recovered.length === 0 && <p className="text-xs text-faint">No recent recoveries</p>}
+              {recovered.map((n, i) => (
+                <Card key={n.id} className="p-4 border-jade/20 animate-row-in" style={{ animationDelay: `${i * 40}ms` }}>
+                  <p className="text-sm font-medium text-ink">{names[n.customer_id] ?? n.customer_id}</p>
+                  <p className="text-xs text-jade-deep mt-1">Payment recovered</p>
+                  <p className="text-xs text-faint mt-1">{formatDate(n.created_at)}</p>
                 </Card>
               ))}
             </div>
