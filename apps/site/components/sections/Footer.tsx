@@ -1,4 +1,5 @@
 import { Container } from "./ui";
+import { Reveal } from "./Reveal";
 
 const columns = [
   { title: "Product", links: ["Subscriptions", "Accounts", "Pricing", "Entitlements API"] },
@@ -20,7 +21,7 @@ export default function Footer() {
     <footer className="border-t border-ink/10 bg-bone-200">
       <Container className="py-16">
         {/* ── brand + nav columns ── */}
-        <div className="grid grid-cols-2 gap-x-8 gap-y-10 md:grid-cols-2 md:gap-10 lg:grid-cols-12">
+        <Reveal className="grid grid-cols-2 gap-x-8 gap-y-10 md:grid-cols-2 md:gap-10 lg:grid-cols-12">
           <div className="col-span-2 md:col-span-1 lg:col-span-4">
             <a href="#" className="flex items-center gap-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -56,10 +57,10 @@ export default function Footer() {
               </ul>
             </div>
           ))}
-        </div>
+        </Reveal>
 
         {/* ── offices ── */}
-        <div className="mt-14 border-t border-ink/10 pt-8">
+        <Reveal delay={80} className="mt-14 border-t border-ink/10 pt-8">
           <h3 className="font-display text-xs font-semibold uppercase tracking-wide text-ink/40">Offices</h3>
           <div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-6 sm:grid-cols-3 lg:grid-cols-5">
             {offices.map((o, i) => (
@@ -74,7 +75,7 @@ export default function Footer() {
               </div>
             ))}
           </div>
-        </div>
+        </Reveal>
 
         <p className="mt-10 text-xs text-ink/45">
           Naira (NGN). Amounts shown human-readable; the API uses kobo.

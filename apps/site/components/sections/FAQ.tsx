@@ -1,4 +1,6 @@
 import { Container, Section, SectionHeading } from "./ui";
+import { Reveal } from "./Reveal";
+import { FaqRow } from "./FaqRow";
 
 const faqs = [
   {
@@ -31,23 +33,16 @@ export default function FAQ() {
   return (
     <Section id="faq" className="bg-white">
       <Container>
-        <SectionHeading center eyebrow="FAQ" title="Questions, answered." />
-        <div className="mx-auto mt-12 max-w-3xl divide-y divide-ink/10 border-y border-ink/10">
-          {faqs.map((f) => (
-            <details key={f.q} className="group py-5">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-display text-base font-semibold text-ink">
-                {f.q}
-                <span
-                  aria-hidden
-                  className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-ink/15 text-ink/50 transition group-open:rotate-45"
-                >
-                  +
-                </span>
-              </summary>
-              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink/65">{f.a}</p>
-            </details>
-          ))}
-        </div>
+        <Reveal>
+          <SectionHeading center eyebrow="FAQ" title="Questions, answered." />
+        </Reveal>
+        <Reveal delay={90}>
+          <div className="mx-auto mt-12 max-w-3xl border-t border-ink/10">
+            {faqs.map((f) => (
+              <FaqRow key={f.q} q={f.q} a={f.a} />
+            ))}
+          </div>
+        </Reveal>
       </Container>
     </Section>
   );
