@@ -87,7 +87,7 @@ export default function Hero() {
         <a href="#" className="flex items-center gap-2.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/plinth-logo.png" alt="Plinth" className="h-9 w-9 object-contain" />
-          <span className="font-sans text-2xl font-semibold leading-none tracking-tight text-ink">
+          <span className="font-display text-2xl font-bold leading-none tracking-tight text-ink">
             Plinth
           </span>
         </a>
@@ -119,13 +119,18 @@ export default function Hero() {
         <div className="mx-auto max-w-4xl text-center">
           {/* Option D — contained frame: "The base" tucks to the 'Y',
               "Stands on." tucks to the end of 'billing'. */}
-          <h1 className="mx-auto w-max max-w-full font-sans font-semibold uppercase leading-[0.9] tracking-tight text-ink">
+          <h1 className="mx-auto w-max max-w-full font-display font-bold uppercase leading-[0.9] tracking-tight text-ink">
             <span className="intro block text-left text-[clamp(34px,5vw,64px)] tracking-[0.01em]">
               The base
             </span>
-            <span className="intro my-[0.05em] flex items-baseline gap-[clamp(40px,9vw,150px)]">
-              <span className="text-[clamp(60px,11vw,134px)]">Your</span>
-              <span className="text-[clamp(52px,9.5vw,116px)]">
+            {/* the big line: stretched ~12% taller than the face draws it, with a hairline
+                stroke (em-scaled) fattening the 700 cut a touch beyond its native weight.
+                Mobile stacks YOUR over BILLING; md+ restores the side-by-side frame. */}
+            <span className="intro my-[0.05em] flex scale-y-[1.12] flex-col items-start [-webkit-text-stroke:0.012em_currentColor] md:flex-row md:items-baseline md:gap-[clamp(40px,9vw,150px)]">
+              <span className="text-[clamp(74px,21vw,134px)] md:text-[clamp(60px,11vw,134px)]">
+                Your
+              </span>
+              <span className="-mt-[0.1em] text-[clamp(74px,21vw,134px)] md:mt-0 md:text-[clamp(52px,9.5vw,116px)]">
                 billing
               </span>
             </span>
@@ -140,7 +145,7 @@ export default function Hero() {
           </p>
 
           {/* ── CTAs (centered; stack on mobile) ── */}
-          <div className="intro pointer-events-auto mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <div className="intro pointer-events-auto mt-12 flex flex-col items-center justify-center gap-3 sm:flex-row md:mt-9">
             <a
               href="#start"
               className="group inline-flex items-center gap-2.5 rounded-full bg-jade px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-jade-600"

@@ -37,7 +37,7 @@ export default function UseCases() {
           title="One base, many businesses."
           sub="If you collect money from the same customers on a schedule, Plinth carries the hard part."
         />
-        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-12 grid gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
           {cases.map((c) => (
             <div key={c.tag} className="flex flex-col rounded-2xl border border-ink/10 bg-white p-6">
               <span className="text-xs font-semibold uppercase tracking-wide text-jade">{c.tag}</span>
@@ -50,7 +50,7 @@ export default function UseCases() {
             <p className="mt-2 text-sm leading-relaxed text-ink/65">
               Presets for common cases, granular policy when you need it.
             </p>
-            <a href="#developers" className="mt-4 text-sm font-semibold text-jade hover:text-jade-600">
+            <a href="#developers" className="-mb-2 mt-2 pb-2 pt-2 text-sm font-semibold text-jade hover:text-jade-600">
               See the API →
             </a>
           </div>

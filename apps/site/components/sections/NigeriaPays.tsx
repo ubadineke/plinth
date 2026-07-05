@@ -17,10 +17,10 @@ export default function NigeriaPays() {
           title="Built for how Nigeria actually pays."
           sub="Cards fail often here; bank transfer rarely does. Plinth is transfer-native — it defaults to the rail that works, and falls back to it when cards die."
         />
-        <div className="mt-12 grid gap-6 sm:grid-cols-3">
+        <div className="mt-10 grid gap-4 sm:mt-12 sm:grid-cols-3 sm:gap-6">
           {stats.map((s) => (
-            <div key={s.label} className="rounded-2xl border border-ink/10 bg-bone p-7">
-              <div className="font-display text-4xl font-semibold tracking-tightest text-ink">{s.value}</div>
+            <div key={s.label} className="rounded-2xl border border-ink/10 bg-bone p-6 sm:p-7">
+              <div className="font-mono tabular-nums text-4xl font-semibold tracking-tightest text-ink">{s.value}</div>
               <p className="mt-2 text-sm leading-relaxed text-ink/65">{s.label}</p>
             </div>
           ))}

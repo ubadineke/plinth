@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
@@ -107,37 +107,49 @@ function useStripTexture() {
   return data;
 }
 
-/* "Built on Nomba rails" with high contrast, brand colors, JetBrains Mono font, 
-   designed to map onto an elongated geometry that counteracts perspective foreshortening. */
+/* "Built on Nomba rails" with high contrast, brand colors, JetBrains Mono font,
+   designed to map onto an elongated geometry that counteracts perspective foreshortening.
+   Painted only after the webfont resolves — a canvas bakes whatever font is
+   available at draw time, so drawing early would freeze the fallback in. */
 function useCaptionTexture() {
-  return useMemo(() => {
-    if (typeof document === "undefined") return null;
-    const c = document.createElement("canvas");
-    c.width = 512;
-    c.height = 256; // 2:1 aspect ratio matches the elongated plane geometry aspect ratio
-    const ctx = c.getContext("2d");
-    if (!ctx) return null;
-    ctx.clearRect(0, 0, c.width, c.height);
-    // Use the primary ink color (#14181C) for maximum contrast and legibility
-    ctx.fillStyle = "#14181C";
-    // Monospace voice matching the brand system (JetBrains Mono fallback)
-    ctx.font = "bold 34px JetBrains Mono, monospace, sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    try {
-      (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = "6px";
-    } catch {
-      /* noop */
-    }
-    // Centered with safety padding to prevent any edge clipping
-    ctx.fillText("BUILT ON", c.width / 2, 90);
-    ctx.fillText("NOMBA RAILS", c.width / 2, 166);
-    const t = new THREE.CanvasTexture(c);
-    t.colorSpace = THREE.SRGBColorSpace;
-    t.anisotropy = 8;
-    t.needsUpdate = true;
-    return t;
+  const [texture, setTexture] = useState<THREE.CanvasTexture | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const draw = () => {
+      if (cancelled) return;
+      const c = document.createElement("canvas");
+      c.width = 512;
+      c.height = 256; // 2:1 aspect ratio matches the elongated plane geometry aspect ratio
+      const ctx = c.getContext("2d");
+      if (!ctx) return;
+      ctx.clearRect(0, 0, c.width, c.height);
+      // Use the primary ink color (#14181C) for maximum contrast and legibility
+      ctx.fillStyle = "#14181C";
+      ctx.font = '700 34px "JetBrains Mono", monospace';
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      try {
+        (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = "6px";
+      } catch {
+        /* noop */
+      }
+      // Centered with safety padding to prevent any edge clipping
+      ctx.fillText("BUILT ON", c.width / 2, 90);
+      ctx.fillText("NOMBA RAILS", c.width / 2, 166);
+      const t = new THREE.CanvasTexture(c);
+      t.colorSpace = THREE.SRGBColorSpace;
+      t.anisotropy = 8;
+      t.needsUpdate = true;
+      setTexture(t);
+    };
+    document.fonts.load('700 34px "JetBrains Mono"').then(draw, draw);
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  return texture;
 }
 
 export default function RoadLogos({ reduce = false }: { reduce?: boolean }) {

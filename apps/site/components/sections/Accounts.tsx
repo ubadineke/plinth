@@ -25,7 +25,7 @@ export default function Accounts() {
       <Container>
         <div className="grid items-center gap-12 lg:grid-cols-2">
           {/* Visual — the "foundation" / stacked-base motif lives here later */}
-          <Placeholder label="Accounts · reconciliation visual" className="order-last min-h-[320px] lg:order-first" />
+          <Placeholder label="Accounts · reconciliation visual" className="order-last min-h-[220px] md:min-h-[320px] lg:order-first" />
           <div>
             <SectionHeading
               eyebrow="Plinth Accounts · the foundation"

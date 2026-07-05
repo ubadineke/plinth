@@ -33,7 +33,7 @@ export default function Developers() {
               title="Integrate in a few lines."
               sub="Drop Plinth in; don't rebuild billing. A clean API, SDKs, and webhooks — money-critical correctness handled for you."
             />
-            <ul className="mt-8 grid grid-cols-2 gap-3">
+            <ul className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
               {bullets.map((b) => (
                 <li key={b} className="flex items-center gap-2 text-sm text-ink/75">
                   <svg aria-hidden viewBox="0 0 16 16" className="h-4 w-4 shrink-0 text-jade" fill="none">
@@ -56,7 +56,7 @@ export default function Developers() {
               <span className="h-3 w-3 rounded-full bg-white/20" />
               <span className="ml-2 font-mono text-xs text-white/40">subscribe.ts</span>
             </div>
-            <pre className="overflow-x-auto p-5 text-[13px] leading-relaxed">
+            <pre className="overflow-x-auto p-4 text-[13px] leading-relaxed md:p-5">
               <code className="font-mono text-bone-200">{snippet}</code>
             </pre>
           </div>

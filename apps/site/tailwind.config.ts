@@ -15,14 +15,14 @@ const config: Config = {
         mid: "#737373",
       },
       fontFamily: {
-        // one family everywhere — Instrument Sans (Inter as fallback while it loads)
-        sans: ["var(--font-sans)", "var(--font-inter)", "system-ui", "sans-serif"],
-        // legacy aliases collapse onto the single sans family so untouched sections stay coherent
-        display: ["var(--font-sans)", "var(--font-inter)", "system-ui", "sans-serif"],
-        poster: ["var(--font-sans)", "var(--font-inter)", "system-ui", "sans-serif"],
-        serif: ["var(--font-sans)", "var(--font-inter)", "system-ui", "sans-serif"],
-        // JetBrains Mono — code snippets only
-        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
+        // The Touchline type system: Satoshi carries body/UI…
+        sans: ['"Satoshi"', "system-ui", "-apple-system", "sans-serif"],
+        // …Clash Display carries every heading (legacy aliases fold onto it)
+        display: ['"Clash Display"', '"Satoshi"', "system-ui", "sans-serif"],
+        poster: ['"Clash Display"', '"Satoshi"', "system-ui", "sans-serif"],
+        serif: ['"Clash Display"', '"Satoshi"', "system-ui", "sans-serif"],
+        // …and JetBrains Mono carries numbers, amounts, and code
+        mono: ['"JetBrains Mono"', "ui-monospace", "monospace"],
       },
       letterSpacing: {
         tightest: "-0.04em",

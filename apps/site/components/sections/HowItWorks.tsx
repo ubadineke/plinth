@@ -27,9 +27,9 @@ export default function HowItWorks() {
           eyebrow="How it works"
           title="Three steps to recurring revenue."
         />
-        <ol className="mt-14 grid gap-6 md:grid-cols-3">
+        <ol className="mt-10 grid gap-4 md:mt-14 md:grid-cols-3 md:gap-6">
           {steps.map((s) => (
-            <li key={s.n} className="relative rounded-2xl border border-ink/10 bg-white p-7">
+            <li key={s.n} className="relative rounded-2xl border border-ink/10 bg-white p-6 md:p-7">
               <span className="font-mono text-sm font-semibold text-jade">{s.n}</span>
               <h3 className="mt-3 font-display text-xl font-semibold text-ink">{s.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-ink/65">{s.body}</p>
