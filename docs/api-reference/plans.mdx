@@ -9,7 +9,7 @@ Create a plan group — a logical container for related plans (e.g., all monthly
 
 <CodeGroup>
 ```bash cURL
-curl -X POST https://api.useplinth.com/v1/plan-groups \
+curl -X POST https://api.useplinth.xyz/v1/plan-groups \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -58,7 +58,7 @@ Create a plan inside a group.
 
 <CodeGroup>
 ```bash cURL
-curl -X POST https://api.useplinth.com/v1/plan-groups/pg_01JABC.../plans \
+curl -X POST https://api.useplinth.xyz/v1/plan-groups/pg_01JABC.../plans \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -134,7 +134,7 @@ const plan = await client.planGroups.createPlan('pg_01JABC...', {
 List all active plans across all groups.
 
 ```bash
-curl "https://api.useplinth.com/v1/plans?plan_group_id=pg_01JABC..." \
+curl "https://api.useplinth.xyz/v1/plans?plan_group_id=pg_01JABC..." \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY"
 ```
 

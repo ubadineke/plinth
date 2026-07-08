@@ -36,7 +36,13 @@ export function computeProration(params: {
   now: Date;
 }): ProrationResult {
   const periodMs = params.periodEnd.getTime() - params.periodStart.getTime();
-  const remainingMs = Math.max(0, params.periodEnd.getTime() - params.now.getTime());
+  // Clamp remaining time to [0, periodMs]. Remaining can never exceed one full period — without the
+  // upper clamp, a `now` before periodStart (e.g. a clock/timeline mismatch) yields a ratio > 1 and
+  // over-charges (the "₦22,000 to switch plans" bug). You can never be prorated more than a full period.
+  const remainingMs = Math.min(
+    Math.max(0, params.periodEnd.getTime() - params.now.getTime()),
+    Math.max(0, periodMs),
+  );
 
   const periodSeconds = BigInt(Math.floor(periodMs / 1000));
   const secondsRemaining = BigInt(Math.floor(remainingMs / 1000));

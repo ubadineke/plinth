@@ -9,7 +9,7 @@ info:
     All amounts are in **kobo** (1/100th of a Naira). ₦5,000 = `500000`.
 
 servers:
-  - url: https://api.useplinth.com
+  - url: https://api.useplinth.xyz
     description: Production
   - url: http://localhost:7331
     description: Local development

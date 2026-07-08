@@ -1,11 +1,13 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import useSWR from 'swr';
 import Link from 'next/link';
 import { Topbar } from '@/components/layout/topbar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, Thead, Th, Tbody, Tr, Td } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Modal } from '@/components/ui/modal';
 import { api } from '@/lib/api';
 import { formatKobo, formatDate } from '@/lib/utils';
@@ -35,26 +37,10 @@ function slugify(value: string): string {
 }
 
 export default function CustomersPage() {
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, isLoading, error, mutate } = useSWR('customers', () => api.customers.list() as Promise<ListResponse>);
+  const customers = data?.data ?? [];
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await api.customers.list() as ListResponse;
-      setCustomers(res.data ?? []);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load customers');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
 
   const filtered = customers.filter((c) => {
     if (!search.trim()) return true;
@@ -88,7 +74,7 @@ export default function CustomersPage() {
 
         {error && (
           <Card className="p-4 border-danger/30">
-            <p className="text-sm text-danger">{error}</p>
+            <p className="text-sm text-danger">{error instanceof Error ? error.message : 'Failed to load customers'}</p>
           </Card>
         )}
 
@@ -106,12 +92,19 @@ export default function CustomersPage() {
               </tr>
             </Thead>
             <Tbody>
-              {loading ? (
-                <tr>
-                  <Td className="text-center text-faint py-8">
-                    Loading…
-                  </Td>
-                </tr>
+              {isLoading ? (
+                <>
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <Tr key={i}>
+                      <Td><Skeleton className="h-4 w-28" /></Td>
+                      <Td><Skeleton className="h-3.5 w-40" /></Td>
+                      <Td><Skeleton className="h-3.5 w-20" /></Td>
+                      <Td><Skeleton className="h-3.5 w-24" /></Td>
+                      <Td><Skeleton className="h-4 w-16 ml-auto" /></Td>
+                      <Td><Skeleton className="h-3.5 w-20" /></Td>
+                    </Tr>
+                  ))}
+                </>
               ) : filtered.length === 0 ? (
                 <tr>
                   <Td className="text-center text-faint py-8">
@@ -158,7 +151,7 @@ export default function CustomersPage() {
         </Card>
 
         {/* Footer */}
-        {!loading && (
+        {!isLoading && (
           <p className="text-xs text-faint">
             {customers.length} customer{customers.length === 1 ? '' : 's'} total
           </p>
@@ -168,7 +161,7 @@ export default function CustomersPage() {
       <AddCustomerModal
         open={showForm}
         onClose={() => setShowForm(false)}
-        onCreated={() => { setShowForm(false); load(); }}
+        onCreated={() => { setShowForm(false); mutate(); }}
       />
     </div>
   );

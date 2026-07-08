@@ -1,9 +1,11 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
+import useSWR from 'swr';
 import { Topbar } from '@/components/layout/topbar';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { api, type WebhookEndpoint, type WebhookDelivery } from '@/lib/api';
 import { formatRelativeDate } from '@/lib/utils';
 import { Plus, RefreshCw, Trash2, KeyRound, ChevronDown, ChevronRight, Copy, Check, Webhook } from 'lucide-react';
@@ -13,8 +15,9 @@ const DELIVERY_STATUS: Record<string, 'delivered' | 'pending' | 'failed' | 'acti
 };
 
 export default function WebhooksPage() {
-  const [endpoints, setEndpoints] = useState<WebhookEndpoint[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading, mutate } = useSWR('webhook-endpoints', () => api.webhookEndpoints.list());
+  const endpoints: WebhookEndpoint[] = data?.data ?? [];
+
   const [adding, setAdding] = useState(false);
   const [url, setUrl] = useState('');
   const [description, setDescription] = useState('');
@@ -23,23 +26,17 @@ export default function WebhooksPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [deliveries, setDeliveries] = useState<{ counts: Record<string, number>; data: WebhookDelivery[] } | null>(null);
 
-  const load = useCallback(() => {
-    setLoading(true);
-    api.webhookEndpoints.list().then((r) => setEndpoints(r.data)).catch(() => {}).finally(() => setLoading(false));
-  }, []);
-  useEffect(() => { load(); }, [load]);
-
   async function create() {
     if (!url.trim()) return;
     const e = await api.webhookEndpoints.create({ url: url.trim(), description: description.trim() || undefined });
     if (e.secret) setRevealed({ id: e.id, secret: e.secret });
     setUrl(''); setDescription(''); setAdding(false);
-    load();
+    mutate();
   }
 
   async function toggle(e: WebhookEndpoint) {
     await api.webhookEndpoints.update(e.id, { enabled: !e.enabled });
-    load();
+    mutate();
   }
   async function rotate(id: string) {
     const e = await api.webhookEndpoints.rotate(id);
@@ -48,7 +45,7 @@ export default function WebhooksPage() {
   async function remove(id: string) {
     await api.webhookEndpoints.remove(id);
     if (expanded === id) setExpanded(null);
-    load();
+    mutate();
   }
   async function openDeliveries(id: string) {
     if (expanded === id) { setExpanded(null); return; }
@@ -118,8 +115,17 @@ export default function WebhooksPage() {
 
         {/* endpoints */}
         <Card className="divide-y divide-line/70">
-          {loading ? (
-            <div className="py-16 text-center text-sm text-faint">Loading…</div>
+          {isLoading ? (
+            <div className="space-y-0 divide-y divide-line/70">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="flex items-center gap-3 px-4 py-4">
+                  <Skeleton className="h-3.5 w-3.5 rounded-sm shrink-0" />
+                  <Skeleton className="h-3.5 flex-1 max-w-xs" />
+                  <Skeleton className="h-5 w-12 rounded-full ml-auto" />
+                  <Skeleton className="h-7 w-16 rounded-lg" />
+                </div>
+              ))}
+            </div>
           ) : endpoints.length === 0 ? (
             <div className="py-16 text-center">
               <Webhook size={22} className="mx-auto text-faint/70" />
@@ -147,7 +153,16 @@ export default function WebhooksPage() {
               {expanded === e.id && (
                 <div className="px-4 pb-4 bg-soft">
                   {!deliveries ? (
-                    <p className="py-4 text-xs text-faint">Loading deliveries…</p>
+                    <div className="py-3 space-y-2">
+                      {[0, 1, 2].map((i) => (
+                        <div key={i} className="flex items-center gap-3 px-3 py-2">
+                          <Skeleton className="h-3 w-32" />
+                          <Skeleton className="h-3 w-16 ml-auto" />
+                          <Skeleton className="h-5 w-14 rounded-full" />
+                          <Skeleton className="h-3 w-20" />
+                        </div>
+                      ))}
+                    </div>
                   ) : (
                     <>
                       <div className="flex items-center gap-2 py-3">

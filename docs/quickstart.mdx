@@ -26,7 +26,7 @@ description: 'Create a customer, subscribe them to a plan, and check their acces
 
 ## Before you begin
 
-<Card title="Get an API key" icon="key" href="https://app.useplinth.com/login">
+<Card title="Get an API key" icon="key" href="https://app.useplinth.xyz/login">
   You need a Plinth API key. If you don't have one yet, get one here. Sandbox keys start with `sk_test_`.
 </Card>
 
@@ -38,7 +38,7 @@ description: 'Create a customer, subscribe them to a plan, and check their acces
 
     <CodeGroup>
     ```bash cURL
-    curl -X POST https://api.useplinth.com/v1/customers \
+    curl -X POST https://api.useplinth.xyz/v1/customers \
       -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY" \
       -H "Content-Type: application/json" \
       -d '{
@@ -79,7 +79,7 @@ description: 'Create a customer, subscribe them to a plan, and check their acces
 
     <CodeGroup>
     ```bash cURL
-    curl -X POST https://api.useplinth.com/v1/subscriptions \
+    curl -X POST https://api.useplinth.xyz/v1/subscriptions \
       -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY" \
       -H "Content-Type: application/json" \
       -d '{
@@ -118,7 +118,7 @@ description: 'Create a customer, subscribe them to a plan, and check their acces
 
     <CodeGroup>
     ```bash cURL
-    curl https://api.useplinth.com/v1/customers/cus_01JXYZ.../entitlements \
+    curl https://api.useplinth.xyz/v1/customers/cus_01JXYZ.../entitlements \
       -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY"
     ```
 

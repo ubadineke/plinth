@@ -77,9 +77,14 @@ export function Reveal({
     return () => io.disconnect();
   }, [threshold]);
 
+  // `Tag` is polymorphic (ElementType). Aliasing to `any` sidesteps a TS quirk where the union's
+  // `children` prop collapses to `never`, which broke the production type-check.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const El = Tag as any;
+
   return (
-    <Tag
-      ref={ref as never}
+    <El
+      ref={ref}
       className={className}
       style={{
         opacity: shown ? 1 : 0,
@@ -90,6 +95,6 @@ export function Reveal({
       }}
     >
       {children}
-    </Tag>
+    </El>
   );
 }

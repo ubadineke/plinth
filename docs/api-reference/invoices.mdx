@@ -13,7 +13,7 @@ List invoices. Filter by customer, state, or date range.
 
 <CodeGroup>
 ```bash cURL
-curl "https://api.useplinth.com/v1/invoices?customer_id=cus_01JXYZ...&state=paid" \
+curl "https://api.useplinth.xyz/v1/invoices?customer_id=cus_01JXYZ...&state=paid" \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY"
 ```
 
@@ -62,7 +62,7 @@ const invoices = await client.invoices.list({
 Retrieve a single invoice.
 
 ```bash
-curl https://api.useplinth.com/v1/invoices/inv_01JDEF... \
+curl https://api.useplinth.xyz/v1/invoices/inv_01JDEF... \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY"
 ```
 
@@ -116,7 +116,7 @@ curl https://api.useplinth.com/v1/invoices/inv_01JDEF... \
 Get the individual charges and credits that make up an invoice.
 
 ```bash
-curl https://api.useplinth.com/v1/invoices/inv_01JDEF.../line-items \
+curl https://api.useplinth.xyz/v1/invoices/inv_01JDEF.../line-items \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY"
 ```
 

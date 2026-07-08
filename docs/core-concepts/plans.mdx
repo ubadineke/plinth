@@ -22,7 +22,7 @@ First, create the group:
 
 <CodeGroup>
 ```bash cURL
-curl -X POST https://api.useplinth.com/v1/plan-groups \
+curl -X POST https://api.useplinth.xyz/v1/plan-groups \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -44,7 +44,7 @@ Then create plans inside it:
 
 <CodeGroup>
 ```bash cURL
-curl -X POST https://api.useplinth.com/v1/plan-groups/pg_01JABC.../plans \
+curl -X POST https://api.useplinth.xyz/v1/plan-groups/pg_01JABC.../plans \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -105,7 +105,7 @@ All `amount_minor` values are in kobo — 1/100th of a Naira. Never pass decimal
 Every plan **requires** a `lookup_key` (lowercase letters, numbers, underscores — unique per tenant) so your app references a plan by a **stable role** instead of an environment-specific UUID:
 
 ```bash
-curl -X POST https://api.useplinth.com/v1/plans \
+curl -X POST https://api.useplinth.xyz/v1/plans \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "plan_group_id": "pg_01JABC...", "name": "Pro", "amount_minor": 500000,
@@ -131,7 +131,7 @@ Historical invoices are never affected either way — they snapshot the amount a
 ## List all plans
 
 ```bash
-curl https://api.useplinth.com/v1/plans \
+curl https://api.useplinth.xyz/v1/plans \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY"
 ```
 

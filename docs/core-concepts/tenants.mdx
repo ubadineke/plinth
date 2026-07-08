@@ -34,7 +34,7 @@ A tenant is your workspace in Plinth. When you sign up, we create a tenant for y
 Every API request requires your key in the `Authorization` header:
 
 ```bash
-curl https://api.useplinth.com/v1/customers \
+curl https://api.useplinth.xyz/v1/customers \
   -H "Authorization: Bearer sk_test_YOUR_KEY"
 ```
 
@@ -52,6 +52,6 @@ Never commit API keys to source control. Use environment variables. If a key is 
 
 ## Key rotation
 
-Rotate keys from the [dashboard](https://app.useplinth.com/dashboard/api-keys). Issuing a new key doesn't invalidate the old one until you explicitly revoke it — giving you time to update your deployment.
+Rotate keys from the [dashboard](https://app.useplinth.xyz/dashboard/api-keys). Issuing a new key doesn't invalidate the old one until you explicitly revoke it — giving you time to update your deployment.
 
 To revoke via API: `DELETE /v1/tenant/api-keys/{key_id}`.

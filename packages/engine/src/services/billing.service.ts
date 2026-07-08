@@ -372,6 +372,20 @@ export class TickService {
     return true;
   }
 
+  // Recover any of a customer's dunning subscriptions to active — used by the transfer recon after it
+  // settles the outstanding invoice (a bank transfer landing on the customer's VA). recoverFromPayment
+  // no-ops the already-paid invoice and just flips the state back to active.
+  async recoverFromPaymentByCustomer(tenantId: string, customerId: string): Promise<number> {
+    const subs = await this.subscriptionRepo.findByCustomer(tenantId, customerId);
+    let recovered = 0;
+    for (const s of subs) {
+      if (DUNNING_RECOVERABLE.includes(s.state) && (await this.recoverFromPayment(tenantId, s.id))) {
+        recovered++;
+      }
+    }
+    return recovered;
+  }
+
   // Records a paid first-period invoice for a checkout payment that already happened.
   // When `activate` is true the subscription transitions incomplete → active and its period
   // is re-anchored to now; otherwise the (already-active) subscription is left as-is.

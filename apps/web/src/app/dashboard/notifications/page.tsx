@@ -1,9 +1,11 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import useSWR from 'swr';
 import { Topbar } from '@/components/layout/topbar';
 import { Card } from '@/components/ui/card';
 import { Tabs } from '@/components/ui/tabs';
 import { Table, Thead, Th, Tbody, Tr, Td } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { MessageSquare, Mail, Search } from 'lucide-react';
@@ -66,40 +68,15 @@ function ChannelPill({ icon: Icon, label, status }: { icon: typeof Mail; label: 
 }
 
 export default function NotificationsPage() {
+  const { data: notifData, isLoading } = useSWR('notifications', () => api.notifications.list() as Promise<ListResponse<Notification>>);
+  const { data: custData } = useSWR('customers', () => api.customers.list() as Promise<ListResponse<Customer>>);
+
+  const items: Notification[] = notifData?.data ?? [];
+  const customerNames: Record<string, string> = Object.fromEntries((custData?.data ?? []).map((c) => [c.id, c.name]));
+
   const [activeTab, setActiveTab] = useState('all');
-  const [items, setItems] = useState<Notification[]>([]);
-  const [customerNames, setCustomerNames] = useState<Record<string, string>>({});
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const [notifRes, custRes] = await Promise.all([
-          api.notifications.list() as Promise<ListResponse<Notification>>,
-          (api.customers.list() as Promise<ListResponse<Customer>>).catch(() => null),
-        ]);
-        if (cancelled) return;
-        setItems(notifRes.data ?? []);
-        if (custRes?.data) {
-          const map: Record<string, string> = {};
-          for (const c of custRes.data) map[c.id] = c.name;
-          setCustomerNames(map);
-        }
-      } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load notifications');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    load();
-    return () => { cancelled = true; };
-  }, []);
 
   const hasFailure = (n: Notification) => n.sms_status === 'failed' || n.email_status === 'failed';
   const isDelivered = (n: Notification) => n.sms_status === 'sent' || n.email_status === 'sent';
@@ -137,10 +114,30 @@ export default function NotificationsPage() {
         </div>
 
         <Card>
-          {loading ? (
-            <div className="py-16 text-center"><p className="text-sm text-faint">Loading notifications…</p></div>
-          ) : error ? (
-            <div className="py-16 text-center"><p className="text-sm text-danger">{error}</p></div>
+          {isLoading ? (
+            <Table>
+              <Thead>
+                <tr>
+                  <Th>Customer</Th><Th>Event</Th><Th>Channels</Th><Th>Message</Th><Th>Sent</Th>
+                </tr>
+              </Thead>
+              <Tbody>
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <Tr key={i}>
+                    <Td><Skeleton className="h-4 w-28" /></Td>
+                    <Td><Skeleton className="h-5 w-20 rounded-full" /></Td>
+                    <Td>
+                      <div className="flex items-center gap-1.5">
+                        <Skeleton className="h-5 w-12 rounded-full" />
+                        <Skeleton className="h-5 w-14 rounded-full" />
+                      </div>
+                    </Td>
+                    <Td><Skeleton className="h-3.5 w-52" /></Td>
+                    <Td><Skeleton className="h-3.5 w-20" /></Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
           ) : filtered.length === 0 ? (
             <div className="py-16 text-center">
               <MessageSquare size={28} className="mx-auto text-faint/70 mb-3" />
@@ -205,7 +202,7 @@ export default function NotificationsPage() {
           )}
         </Card>
 
-        {!loading && !error && (
+        {!isLoading && (
           <p className="text-xs text-faint">
             {filtered.length} notification{filtered.length !== 1 ? 's' : ''} · click a row for detail
           </p>

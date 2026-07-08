@@ -1,11 +1,13 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import useSWR from 'swr';
 import { Topbar } from '@/components/layout/topbar';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs } from '@/components/ui/tabs';
 import { Table, Thead, Th, Tbody, Tr, Td } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api';
 import { formatKobo, formatDate } from '@/lib/utils';
 import { Download } from 'lucide-react';
@@ -53,41 +55,23 @@ function formatPeriod(start: string | null, end: string | null): string {
 
 export default function InvoicesPage() {
   const [activeTab, setActiveTab] = useState('all');
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [customerNames, setCustomerNames] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const [invRes, custRes] = await Promise.all([
-          api.invoices.list() as Promise<ListResponse<Invoice>>,
-          (api.customers.list() as Promise<ListResponse<Customer>>).catch(() => null),
-        ]);
-        if (cancelled) return;
-        setInvoices(invRes.data ?? []);
-        if (custRes?.data) {
-          const map: Record<string, string> = {};
-          for (const c of custRes.data) map[c.id] = c.name;
-          setCustomerNames(map);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load invoices');
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { data: invoicesData, isLoading: invoicesLoading, error } = useSWR(
+    'invoices',
+    () => api.invoices.list() as Promise<ListResponse<Invoice>>,
+  );
+  const { data: customersData, isLoading: customersLoading } = useSWR(
+    'customers',
+    () => (api.customers.list() as Promise<ListResponse<Customer>>).catch(() => ({ object: 'list' as const, data: [] })),
+  );
+
+  const isLoading = invoicesLoading || customersLoading;
+  const invoices = invoicesData?.data ?? [];
+
+  const customerNames: Record<string, string> = {};
+  if (customersData?.data) {
+    for (const c of customersData.data) customerNames[c.id] = c.name;
+  }
 
   const filtered = activeTab === 'all'
     ? invoices
@@ -110,35 +94,50 @@ export default function InvoicesPage() {
           </Button>
         </div>
 
+        {error && (
+          <Card className="p-4 border-danger/30">
+            <p className="text-sm text-danger">{error instanceof Error ? error.message : 'Failed to load invoices'}</p>
+          </Card>
+        )}
+
         <Card>
-          {loading ? (
-            <div className="py-16 text-center">
-              <p className="text-sm text-faint">Loading invoices…</p>
-            </div>
-          ) : error ? (
-            <div className="py-16 text-center">
-              <p className="text-sm text-danger">{error}</p>
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="py-16 text-center">
-              <p className="text-sm text-faint">No invoices in this state</p>
-            </div>
-          ) : (
-            <Table>
-              <Thead>
+          <Table>
+            <Thead>
+              <tr>
+                <Th>Invoice ID</Th>
+                <Th>Customer</Th>
+                <Th className="text-right">Amount</Th>
+                <Th>Mode</Th>
+                <Th>Period</Th>
+                <Th>State</Th>
+                <Th>Due</Th>
+                <Th>Closed</Th>
+              </tr>
+            </Thead>
+            <Tbody>
+              {isLoading ? (
+                <>
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <Tr key={i}>
+                      <Td><Skeleton className="h-3.5 w-24" /></Td>
+                      <Td><Skeleton className="h-4 w-28" /></Td>
+                      <Td><Skeleton className="h-4 w-16 ml-auto" /></Td>
+                      <Td><Skeleton className="h-5 w-14 rounded-full" /></Td>
+                      <Td><Skeleton className="h-3.5 w-32" /></Td>
+                      <Td><Skeleton className="h-5 w-14 rounded-full" /></Td>
+                      <Td><Skeleton className="h-3.5 w-20" /></Td>
+                      <Td><Skeleton className="h-3.5 w-20" /></Td>
+                    </Tr>
+                  ))}
+                </>
+              ) : filtered.length === 0 ? (
                 <tr>
-                  <Th>Invoice ID</Th>
-                  <Th>Customer</Th>
-                  <Th className="text-right">Amount</Th>
-                  <Th>Mode</Th>
-                  <Th>Period</Th>
-                  <Th>State</Th>
-                  <Th>Due</Th>
-                  <Th>Closed</Th>
+                  <Td className="text-center text-faint py-8" colSpan={8}>
+                    No invoices in this state
+                  </Td>
                 </tr>
-              </Thead>
-              <Tbody>
-                {filtered.map((inv, i) => (
+              ) : (
+                filtered.map((inv, i) => (
                   <Tr key={inv.id} className="animate-row-in" style={{ animationDelay: `${Math.min(i, 12) * 28}ms` }}>
                     <Td>
                       <span className="font-mono text-xs text-mid">{inv.id}</span>
@@ -163,13 +162,13 @@ export default function InvoicesPage() {
                     <Td className="text-mid">{inv.due_at ? formatDate(inv.due_at) : '—'}</Td>
                     <Td className="text-mid">{inv.closed_at ? formatDate(inv.closed_at) : '—'}</Td>
                   </Tr>
-                ))}
-              </Tbody>
-            </Table>
-          )}
+                ))
+              )}
+            </Tbody>
+          </Table>
         </Card>
 
-        {!loading && !error && (
+        {!isLoading && !error && (
           <p className="text-xs text-faint">
             {filtered.length} invoice{filtered.length !== 1 ? 's' : ''}
           </p>

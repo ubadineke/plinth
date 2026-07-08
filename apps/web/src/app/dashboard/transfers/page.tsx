@@ -1,11 +1,13 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import useSWR from 'swr';
 import { Topbar } from '@/components/layout/topbar';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, Thead, Th, Tbody, Tr, Td } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api';
 import { formatKobo, formatDate } from '@/lib/utils';
 import { AlertTriangle, CheckCircle, ArrowDownLeft } from 'lucide-react';
@@ -34,50 +36,23 @@ interface SuspenseItem {
 interface CustomerMap { [id: string]: string }
 
 export default function TransfersPage() {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [suspenseItems, setSuspenseItems] = useState<SuspenseItem[]>([]);
-  const [customerNames, setCustomerNames] = useState<CustomerMap>({});
-  const [loading, setLoading] = useState(true);
   const [resolveId, setResolveId] = useState<string | null>(null);
   const [resolveNote, setResolveNote] = useState('');
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setLoading(true);
-      try {
-        const [invRes, suspRes, custRes] = await Promise.allSettled([
-          api.invoices.list() as Promise<{ data: Invoice[] }>,
-          api.suspense.list() as Promise<{ data: SuspenseItem[] }>,
-          api.customers.list() as Promise<{ data: { id: string; name: string }[] }>,
-        ]);
-        if (cancelled) return;
+  const { data: invData, isLoading: invLoading } = useSWR('invoices', () => api.invoices.list() as Promise<{ data: Invoice[] }>);
+  const { data: suspData, isLoading: suspLoading, mutate: mutateSusp } = useSWR('suspense-queue', () => api.suspense.list() as Promise<{ data: SuspenseItem[] }>);
+  const { data: custData } = useSWR('customers', () => api.customers.list() as Promise<{ data: { id: string; name: string }[] }>);
 
-        const paidInvoices = invRes.status === 'fulfilled'
-          ? (invRes.value.data ?? []).filter((i) => i.state === 'paid')
-          : [];
-        setInvoices(paidInvoices);
-
-        if (suspRes.status === 'fulfilled') setSuspenseItems(suspRes.value.data ?? []);
-
-        if (custRes.status === 'fulfilled') {
-          const map: CustomerMap = {};
-          for (const c of custRes.value.data ?? []) map[c.id] = c.name;
-          setCustomerNames(map);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    load();
-    return () => { cancelled = true; };
-  }, []);
+  const invoices = (invData?.data ?? []).filter(i => i.state === 'paid');
+  const suspenseItems = suspData?.data ?? [];
+  const customerNames: CustomerMap = Object.fromEntries((custData?.data ?? []).map(c => [c.id, c.name]));
+  const loading = invLoading || suspLoading;
 
   async function handleResolve(id: string) {
     if (!resolveNote.trim()) return;
     try {
       await api.suspense.resolve(id, resolveNote);
-      setSuspenseItems((prev) => prev.filter((s) => s.id !== id));
+      await mutateSusp();
       setResolveId(null);
       setResolveNote('');
     } catch {
@@ -99,9 +74,30 @@ export default function TransfersPage() {
             </div>
           </CardHeader>
           {loading ? (
-            <CardContent>
-              <p className="text-sm text-faint py-8 text-center">Loading…</p>
-            </CardContent>
+            <Table>
+              <Thead>
+                <tr>
+                  <Th>Date</Th>
+                  <Th>Customer</Th>
+                  <Th>Invoice</Th>
+                  <Th className="text-right">Amount (Tenant)</Th>
+                  <Th className="text-right">Plinth Fee (0.5%)</Th>
+                  <Th>State</Th>
+                </tr>
+              </Thead>
+              <Tbody>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Tr key={i}>
+                    <Td><Skeleton className="h-3.5 w-20" /></Td>
+                    <Td><Skeleton className="h-4 w-28" /></Td>
+                    <Td><Skeleton className="h-3.5 w-20" /></Td>
+                    <Td><Skeleton className="h-4 w-20 ml-auto" /></Td>
+                    <Td><Skeleton className="h-4 w-14 ml-auto" /></Td>
+                    <Td><Skeleton className="h-5 w-14 rounded-full" /></Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
           ) : invoices.length === 0 ? (
             <CardContent>
               <p className="text-sm text-faint py-8 text-center">No settled payments yet</p>
@@ -173,7 +169,32 @@ export default function TransfersPage() {
             )}
           </CardHeader>
 
-          {suspenseItems.length === 0 ? (
+          {loading ? (
+            <Table>
+              <Thead>
+                <tr>
+                  <Th>Date</Th>
+                  <Th>Account Ref</Th>
+                  <Th className="text-right">Amount</Th>
+                  <Th>Narration</Th>
+                  <Th>Reason</Th>
+                  <Th>Action</Th>
+                </tr>
+              </Thead>
+              <Tbody>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Tr key={i}>
+                    <Td><Skeleton className="h-3.5 w-20" /></Td>
+                    <Td><Skeleton className="h-3.5 w-28" /></Td>
+                    <Td><Skeleton className="h-4 w-16 ml-auto" /></Td>
+                    <Td><Skeleton className="h-3.5 w-40" /></Td>
+                    <Td><Skeleton className="h-3.5 w-24" /></Td>
+                    <Td><Skeleton className="h-7 w-16 rounded-lg" /></Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          ) : suspenseItems.length === 0 ? (
             <CardContent>
               <div className="py-8 text-center">
                 <CheckCircle size={24} className="text-jade mx-auto mb-2" />

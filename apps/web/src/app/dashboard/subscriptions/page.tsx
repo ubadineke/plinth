@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import useSWR from 'swr';
 import { Topbar } from '@/components/layout/topbar';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +10,7 @@ import { Select } from '@/components/ui/select';
 import { Tabs } from '@/components/ui/tabs';
 import { Table, Thead, Th, Tbody, Tr, Td } from '@/components/ui/table';
 import { Modal } from '@/components/ui/modal';
+import { Skeleton } from '@/components/ui/skeleton';
 import { formatKobo, formatDate } from '@/lib/utils';
 import { api } from '@/lib/api';
 import { MoreHorizontal, Plus, Play, FastForward, Copy, Check, CreditCard } from 'lucide-react';
@@ -41,11 +43,6 @@ interface Plan { id: string; name: string; amount_minor: string; interval: strin
 
 export default function SubscriptionsPage() {
   const [activeTab, setActiveTab] = useState('all');
-  const [subs, setSubs] = useState<Subscription[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const [clockDays, setClockDays] = useState('30');
@@ -54,6 +51,15 @@ export default function SubscriptionsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [actionSub, setActionSub] = useState<Subscription | null>(null);
 
+  const { data: subsData, isLoading: subsLoading, mutate: mutateSubs } = useSWR('subscriptions', () => api.subscriptions.list() as Promise<{ data: Subscription[] }>);
+  const { data: custsData, isLoading: custsLoading } = useSWR('customers', () => api.customers.list() as Promise<{ data: Customer[] }>);
+  const { data: plansData, isLoading: plansLoading } = useSWR('plans', () => api.plans.list() as Promise<{ data: Plan[] }>);
+
+  const subs = subsData?.data ?? [];
+  const customers = custsData?.data ?? [];
+  const plans = plansData?.data ?? [];
+  const loading = subsLoading || custsLoading || plansLoading;
+
   async function refreshClock() {
     try {
       const c: any = await api.clock.get();
@@ -61,26 +67,7 @@ export default function SubscriptionsPage() {
     } catch { /* clock endpoint optional */ }
   }
 
-  async function load() {
-    setError('');
-    try {
-      const [s, c, p] = await Promise.all([
-        api.subscriptions.list() as Promise<{ data: Subscription[] }>,
-        api.customers.list() as Promise<{ data: Customer[] }>,
-        api.plans.list() as Promise<{ data: Plan[] }>,
-      ]);
-      setSubs(s.data ?? []);
-      setCustomers(c.data ?? []);
-      setPlans(p.data ?? []);
-      refreshClock();
-    } catch (err: any) {
-      setError(err.message ?? 'Failed to load subscriptions');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => { load(); }, []);
+  useEffect(() => { refreshClock(); }, []);
 
   const customerById = Object.fromEntries(customers.map((c) => [c.id, c]));
   const planById = Object.fromEntries(plans.map((p) => [p.id, p]));
@@ -97,7 +84,8 @@ export default function SubscriptionsPage() {
     try {
       const res: any = await api.tick.run();
       flash(`Billing tick ran${res?.renewed != null ? ` — ${res.renewed} renewed` : ''}.`);
-      await load();
+      await mutateSubs();
+      await refreshClock();
     } catch (err: any) {
       flash(`Tick failed: ${err.message}`);
     } finally {
@@ -112,7 +100,8 @@ export default function SubscriptionsPage() {
     try {
       await api.clock.advance(Math.round(days * 24 * 60 * 60));
       flash(`Clock advanced ${days} day${days === 1 ? '' : 's'}. Run a billing tick to charge due subscriptions.`);
-      await load();
+      await mutateSubs();
+      await refreshClock();
     } catch (err: any) {
       flash(`Advance failed: ${err.message}`);
     } finally {
@@ -170,15 +159,37 @@ export default function SubscriptionsPage() {
             {notice}
           </div>
         )}
-        {error && (
-          <div className="text-xs text-danger bg-danger-tint border border-danger/20 rounded-lg px-3 py-2">
-            {error}
-          </div>
-        )}
 
         <Card>
           {loading ? (
-            <div className="py-16 text-center"><p className="text-sm text-faint">Loading…</p></div>
+            <Table>
+              <Thead>
+                <tr>
+                  <Th>Customer</Th>
+                  <Th>Plan</Th>
+                  <Th className="text-right">Amount</Th>
+                  <Th>Rail</Th>
+                  <Th>State</Th>
+                  <Th>Next Bill</Th>
+                  <Th>Created</Th>
+                  <Th></Th>
+                </tr>
+              </Thead>
+              <Tbody>
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Tr key={i}>
+                    <Td><Skeleton className="h-4 w-28" /></Td>
+                    <Td><Skeleton className="h-4 w-24" /></Td>
+                    <Td><Skeleton className="h-4 w-16 ml-auto" /></Td>
+                    <Td><Skeleton className="h-5 w-14 rounded-full" /></Td>
+                    <Td><Skeleton className="h-5 w-16 rounded-full" /></Td>
+                    <Td><Skeleton className="h-3.5 w-20" /></Td>
+                    <Td><Skeleton className="h-3.5 w-20" /></Td>
+                    <Td><Skeleton className="h-7 w-7 rounded-lg" /></Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
           ) : filtered.length === 0 ? (
             <div className="py-16 text-center">
               <p className="text-sm text-faint">No subscriptions in this state</p>
@@ -244,7 +255,7 @@ export default function SubscriptionsPage() {
         customers={customers}
         plans={plans}
         onClose={() => setShowCreate(false)}
-        onCreated={async () => { setShowCreate(false); flash('Subscription created.'); await load(); }}
+        onCreated={async () => { setShowCreate(false); flash('Subscription created.'); await mutateSubs(); }}
       />
 
       <SubscriptionActionsModal
@@ -253,7 +264,7 @@ export default function SubscriptionsPage() {
         customer={actionSub ? customerById[actionSub.customer_id] : undefined}
         plan={actionSub ? planById[actionSub.plan_id] : undefined}
         onClose={() => setActionSub(null)}
-        onChanged={async () => { await load(); }}
+        onChanged={async () => { await mutateSubs(); }}
         flash={flash}
       />
     </div>

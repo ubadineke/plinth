@@ -61,6 +61,19 @@ export function makeWebhookRouter(
     // Observability: log every inbound webhook so we can inspect real payload shapes
     console.log('[webhook:nomba] inbound', JSON.stringify({ sig: sig.slice(0, 16), body: rawBody.slice(0, 1000) }));
 
+    // Dev mirror: Nomba only delivers to one registered URL (this one, in prod), so to still see
+    // live webhooks while developing locally we fire-and-forget an identical copy at a tunnel URL.
+    // Never awaited — a down/slow dev tunnel must not affect the real response to Nomba.
+    if (env.DEV_WEBHOOK_FORWARD_URL) {
+      fetch(env.DEV_WEBHOOK_FORWARD_URL, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', 'nomba-signature': sig },
+        body:    rawBody,
+      }).catch((e) => {
+        console.warn('[webhook:nomba] dev forward failed:', e instanceof Error ? e.message : e);
+      });
+    }
+
     // Signature handling: Nomba's webhooks are inconsistent — checkout payment_success arrives
     // UNSIGNED, while VA-credit (vact_transfer) webhooks are SIGNED with a per-account secret we may
     // not hold. So we do NOT reject on a missing/mismatched signature; the authenticity anchors are

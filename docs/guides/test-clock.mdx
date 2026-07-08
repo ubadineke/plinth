@@ -12,7 +12,7 @@ No other billing API lets you test dunning recovery or grace period expiry witho
 ## Check current simulated time
 
 ```bash
-curl https://api.useplinth.com/admin/clock \
+curl https://api.useplinth.xyz/admin/clock \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY"
 ```
 
@@ -28,7 +28,7 @@ curl https://api.useplinth.com/admin/clock \
 
 ```bash
 # Advance 1 month (30 days)
-curl -X POST https://api.useplinth.com/admin/clock/advance \
+curl -X POST https://api.useplinth.xyz/admin/clock/advance \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY" \
   -H "Content-Type: application/json" \
   -d '{"seconds": 2592000}'
@@ -56,7 +56,7 @@ Common durations:
 Advancing the clock alone doesn't bill anyone. You need to run the tick to process renewals, retries, and state transitions at the new simulated time.
 
 ```bash
-curl -X POST https://api.useplinth.com/admin/tick \
+curl -X POST https://api.useplinth.xyz/admin/tick \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY"
 ```
 
@@ -76,7 +76,7 @@ curl -X POST https://api.useplinth.com/admin/tick \
 <Steps>
   <Step title="Create a subscription that will fail">
     ```bash
-    curl -X POST https://api.useplinth.com/v1/subscriptions \
+    curl -X POST https://api.useplinth.xyz/v1/subscriptions \
       -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY" \
       -H "Content-Type: application/json" \
       -d '{
@@ -92,11 +92,11 @@ curl -X POST https://api.useplinth.com/admin/tick \
 
   <Step title="Advance 1 month + tick — subscription goes past_due">
     ```bash
-    curl -X POST https://api.useplinth.com/admin/clock/advance \
+    curl -X POST https://api.useplinth.xyz/admin/clock/advance \
       -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY" \
       -d '{"seconds": 2592000}'
 
-    curl -X POST https://api.useplinth.com/admin/tick \
+    curl -X POST https://api.useplinth.xyz/admin/tick \
       -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY"
     ```
 
@@ -105,25 +105,25 @@ curl -X POST https://api.useplinth.com/admin/tick \
 
   <Step title="Advance 3 days + tick — retry fires (still fails)">
     ```bash
-    curl -X POST https://api.useplinth.com/admin/clock/advance \
+    curl -X POST https://api.useplinth.xyz/admin/clock/advance \
       -d '{"seconds": 259200}'
-    curl -X POST https://api.useplinth.com/admin/tick
+    curl -X POST https://api.useplinth.xyz/admin/tick
     ```
   </Step>
 
   <Step title="Advance 7 days + tick — retry fires (still fails)">
     ```bash
-    curl -X POST https://api.useplinth.com/admin/clock/advance \
+    curl -X POST https://api.useplinth.xyz/admin/clock/advance \
       -d '{"seconds": 604800}'
-    curl -X POST https://api.useplinth.com/admin/tick
+    curl -X POST https://api.useplinth.xyz/admin/tick
     ```
   </Step>
 
   <Step title="Advance 14 days + tick — final retry, subscription enters grace">
     ```bash
-    curl -X POST https://api.useplinth.com/admin/clock/advance \
+    curl -X POST https://api.useplinth.xyz/admin/clock/advance \
       -d '{"seconds": 1209600}'
-    curl -X POST https://api.useplinth.com/admin/tick
+    curl -X POST https://api.useplinth.xyz/admin/tick
     ```
 
     Subscription is now `grace`. `subscription.grace` webhook fired. The 7-day grace window is open.
@@ -131,9 +131,9 @@ curl -X POST https://api.useplinth.com/admin/tick \
 
   <Step title="Advance 8 more days + tick — delinquent">
     ```bash
-    curl -X POST https://api.useplinth.com/admin/clock/advance \
+    curl -X POST https://api.useplinth.xyz/admin/clock/advance \
       -d '{"seconds": 691200}'
-    curl -X POST https://api.useplinth.com/admin/tick
+    curl -X POST https://api.useplinth.xyz/admin/tick
     ```
 
     Subscription is now `delinquent`. `subscription.delinquent` webhook fired. `has_access: false`.

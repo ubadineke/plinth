@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import useSWR from 'swr';
 import { Topbar } from '@/components/layout/topbar';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +12,7 @@ import { formatKobo } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { Plus, CheckCircle, Layers, FolderPlus, HelpCircle, Trash2, Archive } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface PlanGroup {
   id: string;
@@ -123,10 +125,12 @@ export default function CatalogPage() {
       .catch(() => {});
   }, []);
 
-  // Catalog state
-  const [groups, setGroups] = useState<PlanGroup[]>([]);
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Catalog — shared SWR keys ('plans' is shared with subscriptions page)
+  const { data: groupsData, isLoading: groupsLoading, mutate: mutateGroups } = useSWR('plan-groups', () => api.planGroups.list() as Promise<{ data: PlanGroup[] }>);
+  const { data: plansData, isLoading: plansLoading, mutate: mutatePlans } = useSWR('plans', () => api.plans.list() as Promise<{ data: Plan[] }>);
+  const groups: PlanGroup[] = groupsData?.data ?? [];
+  const plans: Plan[] = plansData?.data ?? [];
+  const loading = groupsLoading || plansLoading;
   const [error, setError] = useState<string | null>(null);
 
   // Modal state
@@ -149,7 +153,7 @@ export default function CatalogPage() {
     try {
       await api.plans.remove(deletePlan.id);
       setDeletePlan(null);
-      await loadCatalog(); // archived plans drop out of the active-only list
+      mutatePlans();
     } catch (e) {
       setDeleteErr(e instanceof Error ? e.message : 'Failed to delete plan');
     } finally {
@@ -157,26 +161,10 @@ export default function CatalogPage() {
     }
   }
 
-  const loadCatalog = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [groupsRes, plansRes] = await Promise.all([
-        api.planGroups.list() as Promise<{ data: PlanGroup[] }>,
-        api.plans.list() as Promise<{ data: Plan[] }>,
-      ]);
-      setGroups(groupsRes.data ?? []);
-      setPlans(plansRes.data ?? []);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load catalog');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadCatalog();
-  }, [loadCatalog]);
+  function loadCatalog() {
+    mutateGroups();
+    mutatePlans();
+  }
 
   async function applyPreset(id: string) {
     if (pendingPreset !== id) {
@@ -220,9 +208,33 @@ export default function CatalogPage() {
             </div>
 
             {loading && (
-              <div className="space-y-3">
+              <div className="space-y-6">
                 {[0, 1].map((i) => (
-                  <div key={i} className="h-28 rounded-xl bg-soft animate-pulse" />
+                  <div key={i} className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-3.5 w-3.5 rounded" />
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-10" />
+                    </div>
+                    {[0, 1].map((j) => (
+                      <Card key={j} className="p-5">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="space-y-2">
+                            <Skeleton className="h-4 w-28" />
+                            <Skeleton className="h-7 w-32" />
+                          </div>
+                          <div className="flex gap-1.5">
+                            <Skeleton className="h-7 w-12 rounded-lg" />
+                            <Skeleton className="h-7 w-7 rounded-lg" />
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Skeleton className="h-5 w-16 rounded-full" />
+                          <Skeleton className="h-5 w-20 rounded-full" />
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
                 ))}
               </div>
             )}
@@ -423,8 +435,8 @@ export default function CatalogPage() {
         open={!!editingPlan}
         plan={editingPlan}
         onClose={() => setEditingPlan(null)}
-        onSaved={(updated) => {
-          setPlans((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+        onSaved={() => {
+          mutatePlans();
           setEditingPlan(null);
         }}
       />

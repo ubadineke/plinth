@@ -9,7 +9,7 @@ Create a new customer.
 
 <CodeGroup>
 ```bash cURL
-curl -X POST https://api.useplinth.com/v1/customers \
+curl -X POST https://api.useplinth.xyz/v1/customers \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -81,7 +81,7 @@ const customer = await client.customers.create({
 List customers with optional filtering.
 
 ```bash
-curl "https://api.useplinth.com/v1/customers?external_ref=usr_1234" \
+curl "https://api.useplinth.xyz/v1/customers?external_ref=usr_1234" \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY"
 ```
 
@@ -106,7 +106,7 @@ curl "https://api.useplinth.com/v1/customers?external_ref=usr_1234" \
 Retrieve a customer by their Nomba ID.
 
 ```bash
-curl https://api.useplinth.com/v1/customers/cus_01JXYZ... \
+curl https://api.useplinth.xyz/v1/customers/cus_01JXYZ... \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY"
 ```
 
@@ -117,7 +117,7 @@ curl https://api.useplinth.com/v1/customers/cus_01JXYZ... \
 Check whether a customer has access and what tier they're on.
 
 ```bash
-curl https://api.useplinth.com/v1/customers/cus_01JXYZ.../entitlements \
+curl https://api.useplinth.xyz/v1/customers/cus_01JXYZ.../entitlements \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY"
 ```
 

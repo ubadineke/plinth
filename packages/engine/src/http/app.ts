@@ -24,6 +24,7 @@ import { makeWebhookEndpointsRouter } from './routes/webhook-endpoints.js';
 import { makeTransferRouter } from './routes/transfer.js';
 import { makeAuthRouter } from './routes/auth.js';
 import { makeApiKeysRouter } from './routes/keys.js';
+import { TestClock } from '../adapters/clock.js';
 import { env } from '../config/env.js';
 import type { Container } from './container.js';
 
@@ -40,6 +41,17 @@ export function buildApp(container: Container): Hono {
 
   app.use('*', cors({ origin: '*', allowHeaders: ['Authorization', 'Content-Type', 'Idempotency-Key'] }));
   app.use('*', loggingMiddleware);
+
+  // Keep the simulated clock current for EVERY request. TestClock.now() reads a cached value that only
+  // refresh() updates — without this, any non-tick path (proration, subscribe, checkout, cancel) would
+  // read a stale value or fall through to real time, corrupting time-based math (e.g. proration).
+  if (container.clock instanceof TestClock) {
+    const testClock = container.clock;
+    app.use('*', async (_c, next) => {
+      await testClock.refresh();
+      await next();
+    });
+  }
 
   app.get('/health', (c) => c.json({ status: 'ok', service: 'plinth' }));
 

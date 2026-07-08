@@ -31,6 +31,9 @@ export class TransferReconService {
     // Activates a pending (incomplete) subscription on first payment — reuses the checkout activation
     // path (records the first-period paid invoice + flips to active). Returns how many it activated.
     private readonly activatePending: (tenantId: string, customerId: string) => Promise<number> = async () => 0,
+    // Recovers a customer's dunning (past_due/grace/delinquent) subscription to active AFTER the
+    // outstanding invoice is settled by an incoming transfer. Returns how many it recovered.
+    private readonly recoverDunning: (tenantId: string, customerId: string) => Promise<number> = async () => 0,
   ) {}
 
   async handleTransfer(transfer: IncomingTransfer): Promise<{ outcome: string }> {
@@ -182,6 +185,11 @@ export class TransferReconService {
       tenantId, customerId, invoiceId: invoice.id,
       outcome, createdAt: now,
     });
+
+    // A fully-settled invoice may have been a dunning sub's overdue renewal — recover it to active.
+    if (outcome === 'paid' || outcome === 'overpaid') {
+      await this.recoverDunning(tenantId, customerId);
+    }
 
     return { outcome };
   }

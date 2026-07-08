@@ -9,7 +9,7 @@ Preview what a plan change will cost before committing. Always call this first.
 
 <CodeGroup>
 ```bash cURL
-curl -X POST https://api.useplinth.com/v1/subscriptions/sub_01JABC.../preview-change \
+curl -X POST https://api.useplinth.xyz/v1/subscriptions/sub_01JABC.../preview-change \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY" \
   -H "Content-Type: application/json" \
   -d '{"new_plan_id": "plan_max_01..."}'
@@ -94,7 +94,7 @@ Commit the plan change.
 
 <CodeGroup>
 ```bash cURL
-curl -X POST https://api.useplinth.com/v1/subscriptions/sub_01JABC.../change-plan \
+curl -X POST https://api.useplinth.xyz/v1/subscriptions/sub_01JABC.../change-plan \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -128,7 +128,7 @@ await client.subscriptions.changePlan('sub_01JABC...', {
 Cancel a pending plan change before it fires.
 
 ```bash
-curl -X DELETE https://api.useplinth.com/v1/subscriptions/sub_01JABC.../scheduled-change \
+curl -X DELETE https://api.useplinth.xyz/v1/subscriptions/sub_01JABC.../scheduled-change \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY"
 ```
 

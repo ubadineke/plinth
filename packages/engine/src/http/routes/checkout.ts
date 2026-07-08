@@ -43,7 +43,7 @@ export function makeCheckoutRouter(
     if (!plan) return c.json({ error: 'plan_not_found' }, 404);
 
     const body = CheckoutLinkSchema.safeParse(await c.req.json().catch(() => ({})));
-    const callbackUrl = body.success ? (body.data.callbackUrl ?? env.CHECKOUT_CALLBACK_URL ?? 'https://app.useplinth.com/checkout/complete') : 'https://app.useplinth.com/checkout/complete';
+    const callbackUrl = body.success ? (body.data.callbackUrl ?? env.CHECKOUT_CALLBACK_URL ?? 'https://app.useplinth.xyz/checkout/complete') : 'https://app.useplinth.xyz/checkout/complete';
 
     // Convention: plinth_{subId}_{6-char suffix} — ~42 chars, within Nomba's 50-char limit.
     // Suffix ensures each retry gets a fresh Nomba order (Nomba rejects duplicate refs).
@@ -96,7 +96,7 @@ export function makeCheckoutRouter(
       tenantId, subscriptionId: subId, newPlanId: parsed.data.plan_id,
     });
 
-    const callbackUrl = parsed.data.callbackUrl ?? env.CHECKOUT_CALLBACK_URL ?? 'https://app.useplinth.com/checkout/complete';
+    const callbackUrl = parsed.data.callbackUrl ?? env.CHECKOUT_CALLBACK_URL ?? 'https://app.useplinth.xyz/checkout/complete';
     const orderReference = `plinth_${sub.id}_${ulid().slice(-6)}`;
 
     const result = await nomba.createCheckoutOrder({

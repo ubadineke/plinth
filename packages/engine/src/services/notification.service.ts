@@ -1,3 +1,4 @@
+import { ulid } from 'ulid';
 import type { CustomerRepo } from '../db/customer.repo.js';
 import type { VirtualAccountRepo } from '../db/virtual-account.repo.js';
 import type { TenantRepo } from '../db/tenant.repo.js';
@@ -160,7 +161,8 @@ export class NotificationService {
   async manualReminder(tenantId: string, customerId: string): Promise<{ ok: boolean; error?: string }> {
     const va = await this.vaRepo.findByCustomer(tenantId, customerId).catch(() => null);
     const where = va ? ` to ${va.accountNumber} (${va.bankName})` : '';
-    const key = `reminder:${customerId}:${this.clock.now().toISOString()}`;
+    // Unique per click (a ULID, NOT the clock) — a frozen test clock would otherwise collide every send.
+    const key = `reminder:${customerId}:${ulid()}`;
     const res = await this.dispatch({ tenantId, customerId }, key, (brand) => ({
       sms:     `${brand}: a reminder that your subscription payment is due. Please pay${where} to keep your plan active.`,
       subject: `Payment reminder`,
