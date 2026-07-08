@@ -147,6 +147,7 @@ const realApi = {
   auth: {
     claim:      (token: string)  => request<{ tenant_id: string; api_key: string }>('/v1/auth/claim', { method: 'POST', body: JSON.stringify({ token }) }),
     magicLink:  (email: string)  => request('/v1/auth/magic-link', { method: 'POST', body: JSON.stringify({ email }) }),
+    demo:       ()               => request<{ tenant_id: string; api_key: string }>('/v1/auth/demo', { method: 'POST' }),
   },
   keys: {
     list:   ()                         => request('/v1/keys'),

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Zap, CreditCard, ArrowLeftRight, AlertTriangle } from 'lucide-react';
 import type { Metadata } from 'next';
+import { DemoButton } from '@/components/DemoButton';
 
 export const metadata: Metadata = {
   title: 'Plinth — Billing built for Nigerian SaaS',
@@ -43,12 +44,7 @@ export default function LandingPage() {
         </p>
 
         <div className="flex items-center justify-center gap-4">
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-medium transition-colors text-sm"
-          >
-            Open Dashboard →
-          </Link>
+          <DemoButton />
           <Link
             href="/docs"
             className="inline-flex items-center gap-2 border border-slate-700 text-slate-300 hover:text-white hover:border-slate-600 px-6 py-3 rounded-xl font-medium transition-colors text-sm"

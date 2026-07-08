@@ -76,6 +76,13 @@ export class AuthService {
     return { tenantId: record.tenantId, apiKey: rawApiKey };
   }
 
+  async demoSession(demoApiKey: string): Promise<{ tenantId: string; apiKey: string }> {
+    const hash = createHash('sha256').update(demoApiKey).digest('hex');
+    const result = await this.tenantRepo.findByApiKeyHash(hash);
+    if (!result) throw new Error('Demo tenant not found — run seed-demo.ts first');
+    return { tenantId: result.tenant.id, apiKey: demoApiKey };
+  }
+
   async sendMagicLink(toEmail: string): Promise<void> {
     const app = await this.applicationRepo.findByEmail(toEmail);
     if (!app || !app.tenantId) throw new Error('No approved account found for this email');

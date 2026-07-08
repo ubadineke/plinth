@@ -27,6 +27,7 @@ const EnvSchema = z.object({
 
   ADMIN_SECRET: z.string().optional(),
   DOCS_SHARED_API_KEY: z.string().optional(),
+  DEMO_API_KEY: z.string().optional(),
   CHECKOUT_CALLBACK_URL: z.string().url().optional(),
 
   RESEND_API_KEY: z.string().optional(),
