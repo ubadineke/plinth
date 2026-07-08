@@ -28,6 +28,7 @@ export interface TenantRepo {
   listApiKeys(tenantId: string): Promise<TenantApiKey[]>;
   revokeApiKey(keyId: string, tenantId: string, revokedAt: Date): Promise<void>;
   deleteExpired(asOf: Date): Promise<number>;
+  listIds(): Promise<string[]>;
 }
 
 type TenantRow = typeof tenants.$inferSelect;
@@ -132,5 +133,10 @@ export class DrizzleTenantRepo implements TenantRepo {
     }
 
     return ids.length;
+  }
+
+  async listIds(): Promise<string[]> {
+    const rows = await db.select({ id: tenants.id }).from(tenants);
+    return rows.map((r) => r.id);
   }
 }

@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import useSWR from 'swr';
 import { Topbar } from '@/components/layout/topbar';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -123,10 +124,12 @@ export default function CatalogPage() {
       .catch(() => {});
   }, []);
 
-  // Catalog state
-  const [groups, setGroups] = useState<PlanGroup[]>([]);
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Catalog — shared SWR keys ('plans' is shared with subscriptions page)
+  const { data: groupsData, isLoading: groupsLoading, mutate: mutateGroups } = useSWR('plan-groups', () => api.planGroups.list() as Promise<{ data: PlanGroup[] }>);
+  const { data: plansData, isLoading: plansLoading, mutate: mutatePlans } = useSWR('plans', () => api.plans.list() as Promise<{ data: Plan[] }>);
+  const groups: PlanGroup[] = groupsData?.data ?? [];
+  const plans: Plan[] = plansData?.data ?? [];
+  const loading = groupsLoading || plansLoading;
   const [error, setError] = useState<string | null>(null);
 
   // Modal state
@@ -149,7 +152,7 @@ export default function CatalogPage() {
     try {
       await api.plans.remove(deletePlan.id);
       setDeletePlan(null);
-      await loadCatalog(); // archived plans drop out of the active-only list
+      mutatePlans();
     } catch (e) {
       setDeleteErr(e instanceof Error ? e.message : 'Failed to delete plan');
     } finally {
@@ -157,26 +160,10 @@ export default function CatalogPage() {
     }
   }
 
-  const loadCatalog = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [groupsRes, plansRes] = await Promise.all([
-        api.planGroups.list() as Promise<{ data: PlanGroup[] }>,
-        api.plans.list() as Promise<{ data: Plan[] }>,
-      ]);
-      setGroups(groupsRes.data ?? []);
-      setPlans(plansRes.data ?? []);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load catalog');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadCatalog();
-  }, [loadCatalog]);
+  function loadCatalog() {
+    mutateGroups();
+    mutatePlans();
+  }
 
   async function applyPreset(id: string) {
     if (pendingPreset !== id) {
@@ -423,8 +410,8 @@ export default function CatalogPage() {
         open={!!editingPlan}
         plan={editingPlan}
         onClose={() => setEditingPlan(null)}
-        onSaved={(updated) => {
-          setPlans((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+        onSaved={() => {
+          mutatePlans();
           setEditingPlan(null);
         }}
       />

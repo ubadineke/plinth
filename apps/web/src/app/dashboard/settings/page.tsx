@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import useSWR from 'swr';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Topbar } from '@/components/layout/topbar';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -73,22 +74,16 @@ export default function SettingsPage() {
   const [clockSeconds, setClockSeconds] = useState('');
   const [tickRunning, setTickRunning] = useState(false);
 
-  // API keys state
+  // API keys — only fetch when on the apikeys tab (null key = disabled)
   type ApiKey = { id: string; prefix: string; mode: string; created_at: string; revoked_at: string | null };
-  const [keys, setKeys] = useState<ApiKey[]>([]);
-  const [keysLoading, setKeysLoading] = useState(false);
+  const { data: keysData, isLoading: keysLoading, mutate: mutateKeys } = useSWR(
+    activeTab === 'apikeys' ? 'api-keys' : null,
+    () => api.keys.list() as Promise<{ data: ApiKey[] }>,
+  );
+  const keys: ApiKey[] = keysData?.data ?? [];
   const [newKey, setNewKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [creating, setCreating] = useState(false);
-
-  useEffect(() => {
-    if (activeTab !== 'apikeys') return;
-    setKeysLoading(true);
-    api.keys.list()
-      .then((res: any) => setKeys(res.data ?? []))
-      .catch(() => {})
-      .finally(() => setKeysLoading(false));
-  }, [activeTab]);
 
   // Notification settings state
   const [notifSms, setNotifSms] = useState(true);
@@ -152,18 +147,16 @@ export default function SettingsPage() {
     try {
       const res = await api.keys.create('live');
       setNewKey(res.api_key);
-      setKeys((prev) => [{ id: res.id, prefix: res.prefix, mode: 'live', created_at: new Date().toISOString(), revoked_at: null }, ...prev]);
+      mutateKeys();
     } catch {} finally { setCreating(false); }
   }
 
   async function revokeKey(id: string) {
     if (!confirm('Revoke this key? Any requests using it will stop working immediately.')) return;
     await api.keys.revoke(id);
-    setKeys((prev) => prev.map((k) => k.id === id ? { ...k, revoked_at: new Date().toISOString() } : k));
+    mutateKeys();
   }
 
-  // Rotate = create a fresh key (same mode) and revoke the old one. The new full key is
-  // shown once in the banner — copy it before leaving the page.
   async function rotateKey(k: ApiKey) {
     if (!confirm('Rotate this key? A new key is created and this one is revoked immediately.')) return;
     setCreating(true);
@@ -171,11 +164,7 @@ export default function SettingsPage() {
       const res = await api.keys.create(k.mode as 'live' | 'test');
       setNewKey(res.api_key);
       await api.keys.revoke(k.id);
-      const now = new Date().toISOString();
-      setKeys((prev) => [
-        { id: res.id, prefix: res.prefix, mode: k.mode, created_at: now, revoked_at: null },
-        ...prev.map((x) => (x.id === k.id ? { ...x, revoked_at: now } : x)),
-      ]);
+      mutateKeys();
     } catch {} finally {
       setCreating(false);
     }
@@ -314,7 +303,17 @@ export default function SettingsPage() {
                     )}
 
                     {keysLoading ? (
-                      <p className="text-xs text-faint py-4 text-center">Loading…</p>
+                      <div className="space-y-3 py-2">
+                        {[0, 1].map((i) => (
+                          <div key={i} className="flex items-center justify-between py-3 border-b border-line last:border-0">
+                            <div className="space-y-1.5">
+                              <div className="h-3.5 w-36 rounded-md bg-line/60 animate-pulse" />
+                              <div className="h-3 w-24 rounded-md bg-line/60 animate-pulse" />
+                            </div>
+                            <div className="h-7 w-16 rounded-lg bg-line/60 animate-pulse" />
+                          </div>
+                        ))}
+                      </div>
                     ) : keys.length === 0 ? (
                       <p className="text-xs text-faint py-4 text-center">No API keys yet. Create one above.</p>
                     ) : (

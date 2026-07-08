@@ -6,7 +6,7 @@ import { db } from '../../db/client.js';
 import { clockState } from '../../db/schema.js';
 import { TestClock } from '../../adapters/clock.js';
 import { RealClock } from '../../adapters/clock.js';
-import type { TickService } from '../../services/billing.service.js';
+import type { TickService, TickResult } from '../../services/billing.service.js';
 import type { TransferReconService } from '../../services/transfer-recon.service.js';
 import type { SuspenseRepo } from '../../db/suspense.repo.js';
 import type { TenantRepo } from '../../db/tenant.repo.js';
@@ -70,24 +70,41 @@ export function makeTickRouter(tickService: TickService, tenantRepo: TenantRepo,
 
   router.post('/', async (c) => {
     const tenantId = c.req.query('tenant_id') ?? '';
-    if (!tenantId) return c.json({ error: 'tenant_id query param required' }, 400);
 
     if (clock instanceof TestClock) await clock.refresh();
 
-    const [result, purged] = await Promise.all([
-      tickService.tick(tenantId),
+    // No tenant_id → tick every tenant, so a single scheduled caller (cron, uptime pinger) covers
+    // the whole platform without needing to know tenant IDs up front.
+    const tenantIds = tenantId ? [tenantId] : await tenantRepo.listIds();
+
+    const [results, purged] = await Promise.all([
+      Promise.all(tenantIds.map((id) => tickService.tick(id))),
       tenantRepo.deleteExpired(new Date()),
     ]);
 
+    const totals = results.reduce<TickResult>(
+      (acc, r) => ({
+        renewed:            acc.renewed + r.renewed,
+        trialsConverted:    acc.trialsConverted + r.trialsConverted,
+        failed:             acc.failed + r.failed,
+        dunningRetried:     acc.dunningRetried + r.dunningRetried,
+        dunningRecovered:   acc.dunningRecovered + r.dunningRecovered,
+        graceExpired:       acc.graceExpired + r.graceExpired,
+        delinquentCanceled: acc.delinquentCanceled + r.delinquentCanceled,
+      }),
+      { renewed: 0, trialsConverted: 0, failed: 0, dunningRetried: 0, dunningRecovered: 0, graceExpired: 0, delinquentCanceled: 0 },
+    );
+
     return c.json({
       object:              'tick_result',
-      renewed:             result.renewed,
-      trials_converted:    result.trialsConverted,
-      failed:              result.failed,
-      dunning_retried:     result.dunningRetried,
-      dunning_recovered:   result.dunningRecovered,
-      grace_expired:       result.graceExpired,
-      delinquent_canceled: result.delinquentCanceled,
+      tenants_ticked:      tenantIds.length,
+      renewed:             totals.renewed,
+      trials_converted:    totals.trialsConverted,
+      failed:              totals.failed,
+      dunning_retried:     totals.dunningRetried,
+      dunning_recovered:   totals.dunningRecovered,
+      grace_expired:       totals.graceExpired,
+      delinquent_canceled: totals.delinquentCanceled,
       sandboxes_purged:    purged,
     });
   });

@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
+import useSWR from 'swr';
 import Link from 'next/link';
 import {
   Users, AlertTriangle, CheckCircle, Key, Copy, BookOpen, CreditCard, Webhook,
@@ -177,59 +178,6 @@ interface Snapshot {
 
 const SEVERITY: Record<string, number> = { delinquent: 0, past_due: 1, grace: 2 };
 
-async function fetchSnapshot(): Promise<Snapshot> {
-  const [subsRes, plansRes, invoicesRes, customersRes] = await Promise.allSettled([
-    api.subscriptions.list() as Promise<{ data: any[] }>,
-    api.plans.list() as Promise<{ data: any[] }>,
-    api.invoices.list() as Promise<{ data: any[] }>,
-    api.customers.list() as Promise<{ data: any[] }>,
-  ]);
-  const subs = subsRes.status === 'fulfilled' ? subsRes.value.data ?? [] : [];
-  const plans = plansRes.status === 'fulfilled' ? plansRes.value.data ?? [] : [];
-  const invoices = invoicesRes.status === 'fulfilled' ? invoicesRes.value.data ?? [] : [];
-  const customers = customersRes.status === 'fulfilled' ? customersRes.value.data ?? [] : [];
-
-  const planById = new Map(plans.map((p: any) => [p.id, p]));
-  const customerNames = new Map<string, string>(customers.map((c: any) => [c.id, c.name]));
-
-  const counts: Record<string, number> = {};
-  for (const s of subs) counts[s.state] = (counts[s.state] ?? 0) + 1;
-
-  const amountOf = (s: any) => Number(planById.get(s.plan_id)?.amount_minor ?? 0) * (s.quantity ?? 1);
-
-  const mrr = subs
-    .filter((s: any) => s.state === 'active' || s.state === 'trialing')
-    .reduce((sum: number, s: any) => sum + amountOf(s), 0);
-
-  const risky = subs.filter((s: any) => s.state in SEVERITY);
-  const atRisk = risky.reduce((sum: number, s: any) => sum + amountOf(s), 0);
-
-  const attention = risky
-    .sort((a: any, b: any) => SEVERITY[a.state] - SEVERITY[b.state])
-    .map((s: any) => ({
-      id: s.id,
-      customer: customerNames.get(s.customer_id) ?? s.customer_id,
-      plan: planById.get(s.plan_id)?.name ?? '—',
-      amount: amountOf(s),
-      state: s.state,
-    }));
-
-  const collected = invoices
-    .filter((inv: any) => inv.state === 'paid')
-    .reduce((sum: number, inv: any) => sum + Number(inv.amount_paid ?? 0), 0);
-
-  return {
-    mrr,
-    counts,
-    totalSubs: subs.length,
-    collected,
-    plinthFee: Math.round(collected * 0.005),
-    atRisk,
-    attention,
-    invoices: invoices.slice(0, 5),
-    customerNames,
-  };
-}
 
 function HeroStat({ label, value, tone }: { label: string; value: string; tone?: 'jade' | 'warn' }) {
   return (
@@ -261,16 +209,40 @@ function BandStat({ label, value, sub }: { label: string; value: number; sub?: s
 
 export default function DashboardPage() {
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [snap, setSnap] = useState<Snapshot | null>(null);
 
   useEffect(() => {
     const isNew = localStorage.getItem('plinth_onboarding_shown') !== 'true';
     if (isNew) setShowOnboarding(true);
   }, []);
 
-  useEffect(() => {
-    fetchSnapshot().then(setSnap).catch(() => {});
-  }, []);
+  // Use the same SWR keys as the other dashboard pages — navigating from
+  // Subscriptions/Customers to Overview reuses cached data with zero re-fetch.
+  const { data: subsData, isLoading: subsLoading } = useSWR('subscriptions', () => api.subscriptions.list() as Promise<{ data: any[] }>);
+  const { data: plansData, isLoading: plansLoading } = useSWR('plans', () => api.plans.list() as Promise<{ data: any[] }>);
+  const { data: invData, isLoading: invLoading } = useSWR('invoices', () => api.invoices.list() as Promise<{ data: any[] }>);
+  const { data: custsData, isLoading: custsLoading } = useSWR('customers', () => api.customers.list() as Promise<{ data: any[] }>);
+
+  const snap = useMemo<Snapshot | null>(() => {
+    if (subsLoading || plansLoading || invLoading || custsLoading) return null;
+    const subs = subsData?.data ?? [];
+    const plans = plansData?.data ?? [];
+    const invoices = invData?.data ?? [];
+    const customers = custsData?.data ?? [];
+
+    const planById = new Map(plans.map((p: any) => [p.id, p]));
+    const customerNames = new Map<string, string>(customers.map((c: any) => [c.id, c.name]));
+    const counts: Record<string, number> = {};
+    for (const s of subs) counts[s.state] = (counts[s.state] ?? 0) + 1;
+    const amountOf = (s: any) => Number(planById.get(s.plan_id)?.amount_minor ?? 0) * (s.quantity ?? 1);
+    const mrr = subs.filter((s: any) => s.state === 'active' || s.state === 'trialing').reduce((sum: number, s: any) => sum + amountOf(s), 0);
+    const risky = subs.filter((s: any) => s.state in SEVERITY);
+    const atRisk = risky.reduce((sum: number, s: any) => sum + amountOf(s), 0);
+    const attention = risky
+      .sort((a: any, b: any) => SEVERITY[a.state] - SEVERITY[b.state])
+      .map((s: any) => ({ id: s.id, customer: customerNames.get(s.customer_id) ?? s.customer_id, plan: planById.get(s.plan_id)?.name ?? '—', amount: amountOf(s), state: s.state }));
+    const collected = invoices.filter((inv: any) => inv.state === 'paid').reduce((sum: number, inv: any) => sum + Number(inv.amount_paid ?? 0), 0);
+    return { mrr, counts, totalSubs: subs.length, collected, plinthFee: Math.round(collected * 0.005), atRisk, attention, invoices: invoices.slice(0, 5), customerNames };
+  }, [subsData, plansData, invData, custsData, subsLoading, plansLoading, invLoading, custsLoading]);
 
   // Scale the demo trend so it lands exactly on live MRR — one consistent story.
   const trend = useMemo(() => {

@@ -1,8 +1,10 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import useSWR from 'swr';
 import { Topbar } from '@/components/layout/topbar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api';
 import { formatKobo, formatDate, cn } from '@/lib/utils';
 import { Bell, Check, X } from 'lucide-react';
@@ -52,46 +54,24 @@ function GraceDaysBar({ daysRemaining, graceDays }: { daysRemaining: number; gra
 }
 
 export default function DunningPage() {
-  const [subs, setSubs] = useState<Subscription[]>([]);
-  const [names, setNames] = useState<Record<string, string>>({});
-  const [plans, setPlans] = useState<Record<string, Plan>>({});
-  const [recovered, setRecovered] = useState<Notification[]>([]);
-  const [graceDays, setGraceDays] = useState(7);
-  const [now, setNow] = useState<Date>(() => new Date());
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [reminders, setReminders] = useState<Record<string, ReminderState>>({});
+  // Shared SWR keys — subscriptions/customers/plans reuse cache from other pages
+  const { data: subsData, isLoading: subsLoading } = useSWR('subscriptions', () => api.subscriptions.list() as Promise<ListResponse<Subscription>>);
+  const { data: custData } = useSWR('customers', () => api.customers.list() as Promise<ListResponse<Customer>>);
+  const { data: planData } = useSWR('plans', () => api.plans.list() as Promise<ListResponse<Plan>>);
+  const { data: notifData } = useSWR('notifications', () => (api.notifications.list() as Promise<ListResponse<Notification>>).catch(() => ({ data: [] as Notification[] })));
+  const { data: policyData } = useSWR('policy', () => (api.policy.get() as Promise<{ grace_days?: number }>).catch(() => null));
+  const { data: clockData } = useSWR('clock', () => (api.clock.get() as Promise<{ simulated_now: string | null }>).catch(() => null));
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const [subRes, custRes, planRes, notifRes, policyRes, clockRes] = await Promise.all([
-          api.subscriptions.list() as Promise<ListResponse<Subscription>>,
-          (api.customers.list() as Promise<ListResponse<Customer>>).catch(() => null),
-          (api.plans.list() as Promise<ListResponse<Plan>>).catch(() => null),
-          (api.notifications.list() as Promise<ListResponse<Notification>>).catch(() => null),
-          (api.policy.get() as Promise<{ grace_days?: number }>).catch(() => null),
-          (api.clock.get() as Promise<{ simulated_now: string | null }>).catch(() => null),
-        ]);
-        if (cancelled) return;
-        setSubs(subRes.data ?? []);
-        if (custRes?.data) { const m: Record<string, string> = {}; for (const c of custRes.data) m[c.id] = c.name; setNames(m); }
-        if (planRes?.data) { const m: Record<string, Plan> = {}; for (const p of planRes.data) m[p.id] = p; setPlans(m); }
-        if (notifRes?.data) setRecovered(notifRes.data.filter((n) => n.event_type === 'recovered').slice(0, 10));
-        if (policyRes?.grace_days != null) setGraceDays(policyRes.grace_days);
-        if (clockRes?.simulated_now) setNow(new Date(clockRes.simulated_now));
-      } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load dunning data');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    load();
-    return () => { cancelled = true; };
-  }, []);
+  const loading = subsLoading;
+  const subs: Subscription[] = subsData?.data ?? [];
+  const names: Record<string, string> = Object.fromEntries((custData?.data ?? []).map((c) => [c.id, c.name]));
+  const plans: Record<string, Plan> = Object.fromEntries((planData?.data ?? []).map((p) => [p.id, p]));
+  const recovered: Notification[] = (notifData?.data ?? []).filter((n) => n.event_type === 'recovered').slice(0, 10);
+  const graceDays: number = policyData?.grace_days ?? 7;
+  const now: Date = clockData?.simulated_now ? new Date(clockData.simulated_now) : new Date();
+
+  const [error] = useState<string | null>(null);
+  const [reminders, setReminders] = useState<Record<string, ReminderState>>({});
 
   async function sendReminder(customerId: string) {
     setReminders((r) => ({ ...r, [customerId]: 'sending' }));
@@ -152,7 +132,21 @@ export default function DunningPage() {
         </div>
 
         {loading ? (
-          <div className="py-16 text-center"><p className="text-sm text-faint">Loading dunning board…</p></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="rounded-2xl border border-line bg-card p-4 space-y-3">
+                <Skeleton className="h-3.5 w-1/3" />
+                <Skeleton className="h-5 w-1/4" />
+                {[0, 1].map((j) => (
+                  <div key={j} className="rounded-xl border border-line p-3 space-y-2">
+                    <Skeleton className="h-3.5 w-2/3" />
+                    <Skeleton className="h-3 w-1/2" />
+                    <Skeleton className="h-7 w-full rounded-lg" />
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
         ) : error ? (
           <div className="py-16 text-center"><p className="text-sm text-danger">{error}</p></div>
         ) : (
