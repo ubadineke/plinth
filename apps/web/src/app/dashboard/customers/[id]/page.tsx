@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Copy, Check } from 'lucide-react';
 import { Topbar } from '@/components/layout/topbar';
@@ -8,45 +8,15 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs } from '@/components/ui/tabs';
 import { Table, Thead, Th, Tbody, Tr, Td } from '@/components/ui/table';
-import { api, type VirtualAccount } from '@/lib/api';
 import { formatKobo, formatDate } from '@/lib/utils';
-
-interface Customer {
-  id: string;
-  external_ref: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  balance: string;
-  created_at: string;
-}
-
-interface Entitlements {
-  subscription_id: string | null;
-  state: string | null;
-  has_access: boolean;
-  tier: string | null;
-  features: string[] | null;
-}
-
-interface Subscription {
-  id: string;
-  customer_id: string;
-  plan_id: string;
-  state: string;
-  quantity: number;
-  current_period_end: string | null;
-  next_bill_at: string | null;
-}
-
-interface NotifItem {
-  id: string;
-  event_type: string | null;
-  message: string | null;
-  sms_status: string | null;
-  email_status: string | null;
-  created_at: string;
-}
+import {
+  useCustomer,
+  useCustomerEntitlements,
+  useCustomerVirtualAccount,
+  useProvisionVirtualAccount,
+} from '@/lib/queries/customers';
+import { useSubscriptions } from '@/lib/queries/subscriptions';
+import { useNotifications, useSendReminder } from '@/lib/queries/notifications';
 
 const NOTIF_LABEL: Record<string, string> = {
   payment_due: 'Payment due', past_due: 'Past due', delinquent: 'Delinquent', recovered: 'Recovered',
@@ -69,68 +39,19 @@ export default function CustomerDetailPage() {
   const [tab, setTab] = useState('subscriptions');
   const [copied, setCopied] = useState(false);
 
-  const [customer, setCustomer] = useState<Customer | null>(null);
-  const [entitlements, setEntitlements] = useState<Entitlements | null>(null);
-  const [subs, setSubs] = useState<Subscription[]>([]);
-  const [va, setVa] = useState<VirtualAccount | null>(null);
-  const [provisioning, setProvisioning] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [notifs, setNotifs] = useState<NotifItem[]>([]);
-  const [notifsLoaded, setNotifsLoaded] = useState(false);
-  const [reminding, setReminding] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle');
+  const customerQuery = useCustomer(id);
+  const entitlementsQuery = useCustomerEntitlements(id);
+  const subscriptionsQuery = useSubscriptions();
+  const vaQuery = useCustomerVirtualAccount(id);
+  const provisionVa = useProvisionVirtualAccount(id);
+  const notificationsQuery = useNotifications(id, tab === 'notifications' && Boolean(id));
+  const sendReminder = useSendReminder();
 
-  const load = useCallback(async () => {
-    if (!id) return;
-    setLoading(true);
-    setError(null);
-    setNotFound(false);
-    try {
-      const customerData = await api.customers.get(id) as Customer;
-      setCustomer(customerData);
-
-      // These are best-effort and shouldn't block rendering the customer.
-      const [ent, subList, vaRes] = await Promise.allSettled([
-        api.customers.entitlements(id) as Promise<Entitlements>,
-        api.subscriptions.list() as Promise<{ data: Subscription[] }>,
-        api.customers.getVirtualAccount(id),
-      ]);
-
-      if (ent.status === 'fulfilled') setEntitlements(ent.value);
-      if (subList.status === 'fulfilled') {
-        setSubs((subList.value.data ?? []).filter((s) => s.customer_id === id));
-      }
-      setVa(vaRes.status === 'fulfilled' ? vaRes.value : null); // 404 → none yet
-    } catch (e) {
-      if (e instanceof Error && /404/.test(e.message)) {
-        setNotFound(true);
-      } else {
-        setError(e instanceof Error ? e.message : 'Failed to load customer');
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
-
-  useEffect(() => { load(); }, [load]);
-
-  useEffect(() => {
-    if (tab !== 'notifications' || !id || notifsLoaded) return;
-    (api.notifications.list(id) as Promise<{ data: NotifItem[] }>)
-      .then((r) => { setNotifs(r.data ?? []); setNotifsLoaded(true); })
-      .catch(() => {});
-  }, [tab, id, notifsLoaded]);
-
-  async function sendReminder() {
-    if (!id) return;
-    setReminding('sending');
-    try {
-      const r = await api.notifications.remind(id) as { ok?: boolean };
-      setReminding(r.ok ? 'sent' : 'failed');
-      setNotifsLoaded(false); // refresh history next time the tab opens
-    } catch { setReminding('failed'); }
-  }
+  const customer = customerQuery.data;
+  const entitlements = entitlementsQuery.data;
+  const subs = (subscriptionsQuery.data?.data ?? []).filter((s) => s.customer_id === id);
+  const va = vaQuery.data;
+  const notifs = notificationsQuery.data?.data ?? [];
 
   function copyId() {
     if (!customer) return;
@@ -139,15 +60,14 @@ export default function CustomerDetailPage() {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  async function provisionVa() {
-    if (!id) return;
-    setProvisioning(true);
-    try { setVa(await api.customers.virtualAccount(id)); }
-    catch (e) { setError(e instanceof Error ? e.message : 'Failed to provision virtual account'); }
-    finally { setProvisioning(false); }
-  }
+  // Entitlements/subscriptions/VA fetch in parallel with the customer record
+  // (unlike the sequential Promise.allSettled this replaces) — wait for all
+  // four to settle before rendering, so the VA/entitlements cards never
+  // flash their "none yet" empty state before the real data has arrived.
+  const isPageLoading =
+    customerQuery.isPending || entitlementsQuery.isPending || subscriptionsQuery.isPending || vaQuery.isPending;
 
-  if (loading) {
+  if (isPageLoading) {
     return (
       <div className="flex flex-col">
         <Topbar title="Customer" />
@@ -158,7 +78,7 @@ export default function CustomerDetailPage() {
     );
   }
 
-  if (notFound || !customer) {
+  if (!customer) {
     return (
       <div className="flex flex-col">
         <Topbar title="Customer" />
@@ -166,7 +86,7 @@ export default function CustomerDetailPage() {
           <Card className="p-8 text-center">
             <p className="text-sm font-medium text-ink">Customer not found</p>
             <p className="text-xs text-faint mt-1">
-              {error ?? 'This customer does not exist or could not be loaded.'}
+              {customerQuery.error instanceof Error ? customerQuery.error.message : 'This customer does not exist or could not be loaded.'}
             </p>
           </Card>
         </div>
@@ -182,9 +102,11 @@ export default function CustomerDetailPage() {
       <Topbar title={customer.name} subtitle={customer.email} />
 
       <div className="p-6 space-y-4">
-        {error && (
+        {provisionVa.isError && (
           <Card className="p-4 border-danger/30">
-            <p className="text-sm text-danger">{error}</p>
+            <p className="text-sm text-danger">
+              {provisionVa.error instanceof Error ? provisionVa.error.message : 'Failed to provision virtual account'}
+            </p>
           </Card>
         )}
 
@@ -246,13 +168,13 @@ export default function CustomerDetailPage() {
                     size="sm"
                     variant="outline"
                     className="w-full text-xs"
-                    onClick={sendReminder}
-                    disabled={reminding === 'sending' || (!customer.phone && !customer.email)}
+                    onClick={() => id && sendReminder.mutate(id)}
+                    disabled={sendReminder.isPending || (!customer.phone && !customer.email)}
                     title="Send this customer a payment reminder by SMS + email"
                   >
-                    {reminding === 'sending' ? 'Sending…'
-                      : reminding === 'sent' ? '✓ Reminder sent'
-                      : reminding === 'failed' ? 'Failed — retry'
+                    {sendReminder.isPending ? 'Sending…'
+                      : sendReminder.isSuccess ? '✓ Reminder sent'
+                      : sendReminder.isError ? 'Failed — retry'
                       : 'Send payment reminder'}
                   </Button>
                 </div>
@@ -284,8 +206,8 @@ export default function CustomerDetailPage() {
                 ) : (
                   <div className="space-y-2">
                     <p className="text-xs text-faint">No virtual account yet. Provision a dedicated NUBAN for this customer to pay by transfer.</p>
-                    <Button size="sm" variant="outline" onClick={provisionVa} disabled={provisioning}>
-                      {provisioning ? 'Provisioning…' : 'Provision virtual account'}
+                    <Button size="sm" variant="outline" onClick={() => provisionVa.mutate()} disabled={provisionVa.isPending}>
+                      {provisionVa.isPending ? 'Provisioning…' : 'Provision virtual account'}
                     </Button>
                   </div>
                 )}

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Container } from "./ui";
 import { Reveal } from "./Reveal";
 
@@ -24,8 +25,7 @@ export default function Footer() {
         <Reveal className="grid grid-cols-2 gap-x-8 gap-y-10 md:grid-cols-2 md:gap-10 lg:grid-cols-12">
           <div className="col-span-2 md:col-span-1 lg:col-span-4">
             <a href="#" className="flex items-center gap-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/plinth-logo.png" alt="Plinth" className="h-8 w-8 object-contain" />
+              <Image src="/plinth-logo.png" alt="Plinth" width={32} height={32} className="h-8 w-8 object-contain" />
               <span className="font-display text-lg font-semibold tracking-tightest text-ink">Plinth</span>
             </a>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-ink/60">

@@ -51,6 +51,17 @@ export function Reveal({
 }: RevealProps) {
   const ref = useRef<HTMLElement | null>(null);
   const [shown, setShown] = useState(false);
+  // `ElementType` spans void tags (img, br, input…) whose JSX children type
+  // is `never`; TS then requires `children` to satisfy every member of that
+  // union, which a single ReactNode child never can. Narrowing the tag at
+  // the render site (rather than dropping the generic `as` prop) is the
+  // standard escape hatch for polymorphic components in TS.
+  const TagEl = Tag as ElementType<{
+    ref?: unknown;
+    className?: string;
+    style?: CSSProperties;
+    children?: ReactNode;
+  }>;
 
   useEffect(() => {
     const el = ref.current;
@@ -77,14 +88,9 @@ export function Reveal({
     return () => io.disconnect();
   }, [threshold]);
 
-  // `Tag` is polymorphic (ElementType). Aliasing to `any` sidesteps a TS quirk where the union's
-  // `children` prop collapses to `never`, which broke the production type-check.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const El = Tag as any;
-
   return (
-    <El
-      ref={ref}
+    <TagEl
+      ref={ref as never}
       className={className}
       style={{
         opacity: shown ? 1 : 0,
@@ -95,6 +101,6 @@ export function Reveal({
       }}
     >
       {children}
-    </El>
+    </TagEl>
   );
 }

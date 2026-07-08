@@ -54,27 +54,33 @@
     --soft: #f0f0ed;
     --line: #e9e9e5;
 
-    /* ink ramp */
+    /* ink ramp — mid/faint nudged to clear WCAG AA 4.5:1 against every core
+       surface (canvas/canvas-hi/canvas-lo/card/soft). An axe-core sweep
+       caught both failing (mid at 4.49, faint badly at ~2.4) — there isn't
+       room on a background this light to keep faint meaningfully lighter
+       than mid and still pass AA for real text. */
     --ink: #0a0a0a;
     --body: #3d3d3a;
-    --mid: #71716c;
-    --faint: #a3a39e;
+    --mid: #6d6d69;
+    --faint: #6d6d6a;
 
     /* jade — the accent. --jade is the vibrant brand hue (dots, large text);
-       --jade-deep is AA-safe for white-text buttons + small jade text (4.7:1). */
+       --jade-deep is AA-safe for white-text buttons + small jade text, and
+       for its own badge tint (bg-jade-tint text-jade-deep, 4.53:1). */
     --jade: #0fa37f;
-    --jade-deep: #0b8366;
+    --jade-deep: #0a7b60;
     --jade-tint: #dff3ec;
     --jade-lite: #3bc0a1;
 
-    /* semantic */
-    --warn: #b45309;
+    /* semantic — warn/danger/info nudged to clear AA on their own badge
+       tints (bg-X-tint text-X pairing, per Badge's tone map): 4.51/4.52/4.51 */
+    --warn: #b15208;
     --warn-bar: #d97706;
     --warn-tint: #faf1e0;
-    --danger: #d23b43;
+    --danger: #c5373f;
     --danger-bar: #e5484d;
     --danger-tint: #fbeaea;
-    --info: #2563eb;
+    --info: #2462e9;
     --info-tint: #e8eefa;
 
     /* dark authority panel (hero) */
@@ -99,7 +105,7 @@
     --ink: #f2f2ef;
     --body: #cfcfca;
     --mid: #8f8f89;
-    --faint: #61615c;
+    --faint: #848481;
 
     --jade-tint: #12312a;
     --warn-tint: #2d2213;
@@ -191,3 +197,70 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* driver.js dashboard tour — retheme its default popover (white card, blue
+   buttons) onto the Counting House tokens instead of shipping its own look. */
+.plinth-tour-popover.driver-popover {
+  background-color: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow-pop);
+  max-width: 320px;
+  padding: 18px;
+}
+.plinth-tour-popover .driver-popover-title {
+  font-family: var(--font-display, inherit);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.plinth-tour-popover .driver-popover-description {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--mid);
+}
+.plinth-tour-popover .driver-popover-progress-text {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  color: var(--faint);
+}
+.plinth-tour-popover .driver-popover-footer-btn {
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background-color: var(--canvas);
+  color: var(--ink);
+  padding: 5px 11px;
+}
+.plinth-tour-popover .driver-popover-footer-btn:hover,
+.plinth-tour-popover .driver-popover-footer-btn:focus {
+  background-color: var(--card);
+  border-color: var(--faint);
+}
+.plinth-tour-popover .driver-popover-next-btn,
+.plinth-tour-popover .driver-popover-done-btn {
+  border-color: var(--jade-deep);
+  background-color: var(--jade-deep);
+  color: #fff;
+}
+.plinth-tour-popover .driver-popover-next-btn:hover,
+.plinth-tour-popover .driver-popover-done-btn:hover {
+  background-color: var(--jade-deep);
+  filter: brightness(0.95);
+}
+.plinth-tour-popover .driver-popover-close-btn {
+  color: var(--faint);
+}
+.plinth-tour-popover .driver-popover-close-btn:hover {
+  color: var(--ink);
+}
+/* driver.js's base rule per side zeroes out 3 of the 4 borders and leaves
+   the matching one (e.g. side-left keeps border-left-color) at its default
+   white — override that same side, not the opposite one. */
+.plinth-tour-popover .driver-popover-arrow-side-left { border-left-color: var(--card); }
+.plinth-tour-popover .driver-popover-arrow-side-right { border-right-color: var(--card); }
+.plinth-tour-popover .driver-popover-arrow-side-top { border-top-color: var(--card); }
+.plinth-tour-popover .driver-popover-arrow-side-bottom { border-bottom-color: var(--card); }

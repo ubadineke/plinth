@@ -1,29 +1,15 @@
 'use client';
 import { useState } from 'react';
-import useSWR from 'swr';
 import { Topbar } from '@/components/layout/topbar';
 import { Card } from '@/components/ui/card';
 import { Tabs } from '@/components/ui/tabs';
 import { Table, Thead, Th, Tbody, Tr, Td } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { api } from '@/lib/api';
+import { useNotifications } from '@/lib/queries/notifications';
+import { useCustomers } from '@/lib/queries/customers';
+import type { NotificationRecord } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
 import { MessageSquare, Mail, Search } from 'lucide-react';
-
-interface Notification {
-  id: string;
-  customer_id: string;
-  event_type: string | null;
-  message: string | null;
-  sms_to: string | null;
-  sms_status: string | null;
-  email_to: string | null;
-  email_status: string | null;
-  created_at: string;
-}
-
-interface Customer { id: string; name: string; email: string }
-interface ListResponse<T> { object: 'list'; data: T[] }
 
 const EVENT_LABEL: Record<string, string> = {
   payment_due: 'Payment due',
@@ -68,25 +54,29 @@ function ChannelPill({ icon: Icon, label, status }: { icon: typeof Mail; label: 
 }
 
 export default function NotificationsPage() {
-  const { data: notifData, isLoading } = useSWR('notifications', () => api.notifications.list() as Promise<ListResponse<Notification>>);
-  const { data: custData } = useSWR('customers', () => api.customers.list() as Promise<ListResponse<Customer>>);
-
-  const items: Notification[] = notifData?.data ?? [];
-  const customerNames: Record<string, string> = Object.fromEntries((custData?.data ?? []).map((c) => [c.id, c.name]));
-
   const [activeTab, setActiveTab] = useState('all');
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  const hasFailure = (n: Notification) => n.sms_status === 'failed' || n.email_status === 'failed';
-  const isDelivered = (n: Notification) => n.sms_status === 'sent' || n.email_status === 'sent';
+  const notificationsQuery = useNotifications(undefined, true);
+  const customersQuery = useCustomers();
+
+  const items = notificationsQuery.data?.data ?? [];
+  const customerNames: Record<string, string> = {};
+  for (const c of customersQuery.data?.data ?? []) customerNames[c.id] = c.name;
+
+  // Original code waited for the (best-effort) customer names fetch too.
+  const isLoading = notificationsQuery.isPending || customersQuery.isPending;
+
+  const hasFailure = (n: NotificationRecord) => n.sms_status === 'failed' || n.email_status === 'failed';
+  const isDelivered = (n: NotificationRecord) => n.sms_status === 'sent' || n.email_status === 'sent';
 
   const filtered = items.filter((n) => {
     if (activeTab === 'delivered' && !isDelivered(n)) return false;
     if (activeTab === 'failed' && !hasFailure(n)) return false;
     if (search.trim()) {
       const q = search.toLowerCase();
-      const name = (customerNames[n.customer_id] ?? n.customer_id).toLowerCase();
+      const name = (customerNames[n.customer_id ?? ''] ?? n.customer_id ?? '').toLowerCase();
       const msg = (n.message ?? '').toLowerCase();
       const ev = eventLabel(n.event_type).toLowerCase();
       if (!name.includes(q) && !msg.includes(q) && !ev.includes(q)) return false;
@@ -163,7 +153,7 @@ export default function NotificationsPage() {
                     onClick={() => setExpanded(expanded === n.id ? null : n.id)}
                   >
                     <Td className="font-medium text-ink">
-                      {customerNames[n.customer_id] ?? (
+                      {customerNames[n.customer_id ?? ''] ?? (
                         <span className="font-mono text-xs text-mid">{n.customer_id}</span>
                       )}
                     </Td>

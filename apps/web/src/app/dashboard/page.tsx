@@ -1,11 +1,7 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
-import useSWR from 'swr';
 import Link from 'next/link';
-import {
-  Users, AlertTriangle, CheckCircle, Key, Copy, BookOpen, CreditCard, Webhook,
-  ArrowRight, Sparkles, ArrowUpRight,
-} from 'lucide-react';
+import { CheckCircle, ArrowUpRight } from 'lucide-react';
 import { Topbar } from '@/components/layout/topbar';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,153 +12,22 @@ import { Spark } from '@/components/charts/spark';
 import { SubMix } from '@/components/charts/sub-mix';
 import { MOCK_MRR_TREND } from '@/lib/mock-data';
 import { formatKobo, formatRelativeDate, cn } from '@/lib/utils';
-import { api } from '@/lib/api';
-
-const DEMO_API_KEY = 'sk_live_a1b2c3d4e5f67890';
-
-function OnboardingView({ onDismiss }: { onDismiss: () => void }) {
-  const [copied, setCopied] = useState(false);
-
-  function copy() {
-    navigator.clipboard.writeText(DEMO_API_KEY).catch(() => {});
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
-  return (
-    <div className="flex flex-col">
-      <Topbar title="Welcome to Plinth" subtitle="Get started in under 5 minutes" />
-      <div className="mx-auto w-full max-w-2xl space-y-5 p-6">
-        {/* Welcome card — the one dark panel */}
-        <div className="hero-panel rounded-2xl p-6 text-hero-ink">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="mb-2 flex items-center gap-2">
-                <Sparkles size={16} className="text-jade-lite" />
-                <span className="label-mono text-hero-mut">Account approved</span>
-              </div>
-              <h2 className="mb-1 font-display text-xl font-semibold tracking-tight">
-                Your Plinth account is live
-              </h2>
-              <p className="text-[13.5px] leading-relaxed text-hero-mut">
-                You're now connected to Nomba's payment infrastructure. Start billing your
-                customers in minutes.
-              </p>
-            </div>
-            <CheckCircle size={28} className="shrink-0 text-jade-lite" />
-          </div>
-        </div>
-
-        {/* API key */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Key size={15} className="text-jade" />
-              Your live API key
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center gap-2">
-              <code className="flex-1 overflow-x-auto rounded-lg border border-line bg-soft px-4 py-3 font-mono text-[13px] text-ink">
-                {DEMO_API_KEY}
-              </code>
-              <button
-                onClick={copy}
-                className="flex shrink-0 items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-xs font-medium text-body transition-colors duration-150 hover:border-faint hover:text-ink"
-              >
-                <Copy size={12} />
-                {copied ? 'Copied ✓' : 'Copy'}
-              </button>
-            </div>
-            <p className="flex items-center gap-1.5 text-xs text-warn">
-              <AlertTriangle size={12} />
-              Keep this key private. Never commit it to a repository or share it publicly.
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Quickstart steps */}
-        <Card>
-          <CardHeader><CardTitle>Quickstart — 3 API calls</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            {[
-              {
-                step: 1,
-                title: 'Create a customer',
-                code: `curl -X POST https://api.useplinth.xyz/v1/customers \\
-  -H "Authorization: Bearer ${DEMO_API_KEY}" \\
-  -d '{"name":"Acme Corp","email":"billing@acme.ng"}'`,
-                href: '/docs/api-reference/create-customer',
-              },
-              {
-                step: 2,
-                title: 'Subscribe them to a plan',
-                code: `curl -X POST https://api.useplinth.xyz/v1/subscriptions \\
-  -H "Authorization: Bearer ${DEMO_API_KEY}" \\
-  -d '{"customer_id":"cus_...","plan_id":"pln_..."}'`,
-                href: '/docs/api-reference/create-subscription',
-              },
-              {
-                step: 3,
-                title: 'Check entitlements before serving features',
-                code: `curl https://api.useplinth.xyz/v1/customers/cus_.../entitlements \\
-  -H "Authorization: Bearer ${DEMO_API_KEY}"`,
-                href: '/docs/api-reference/get-customer-entitlements',
-              },
-            ].map(({ step, title, code, href }) => (
-              <div key={step} className="flex gap-4">
-                <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-jade-tint">
-                  <span className="font-mono text-xs font-bold text-jade-deep">{step}</span>
-                </div>
-                <div className="flex-1 space-y-2">
-                  <p className="text-[13.5px] font-medium text-ink">{title}</p>
-                  <pre className="whitespace-pre-wrap break-all rounded-lg border border-line bg-soft p-3 font-mono text-xs text-body">
-                    {code}
-                  </pre>
-                  <Link
-                    href={href}
-                    className="flex items-center gap-1 text-xs font-medium text-jade-deep hover:underline"
-                  >
-                    View full docs <ArrowRight size={10} />
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Next steps */}
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { icon: <BookOpen size={16} />, title: 'Read the docs', desc: 'Full API reference, guides, and SDKs', href: '/docs' },
-            { icon: <CreditCard size={16} />, title: 'Set up plans', desc: 'Create your billing catalog', href: '/dashboard/catalog' },
-            { icon: <Webhook size={16} />, title: 'Configure webhooks', desc: 'Get notified on every event', href: '/dashboard/webhooks' },
-            { icon: <Users size={16} />, title: 'Invite your team', desc: 'Coming soon', href: '#' },
-          ].map(({ icon, title, desc, href }) => (
-            <Link key={title} href={href} className="group block">
-              <div className="rounded-xl border border-line bg-card p-4 shadow-card transition-[border-color,box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:border-faint">
-                <div className="mb-2 text-jade">{icon}</div>
-                <p className="text-[13.5px] font-medium text-ink">{title}</p>
-                <p className="mt-0.5 text-xs text-mid">{desc}</p>
-              </div>
-            </Link>
-          ))}
-        </div>
-
-        <div className="text-center">
-          <button
-            onClick={onDismiss}
-            className="text-xs text-faint underline transition-colors duration-150 hover:text-mid"
-          >
-            Skip to dashboard →
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+import { useSubscriptions } from '@/lib/queries/subscriptions';
+import { usePlans, type Plan } from '@/lib/queries/plans';
+import { useInvoices, type Invoice } from '@/lib/queries/invoices';
+import { useCustomers } from '@/lib/queries/customers';
+import type { Subscription, Customer } from '@/lib/types';
+import { QuickstartCard, isQuickstartDismissed } from '@/components/onboarding/quickstart-card';
 
 /* ── main overview ──────────────────────────────────────────────────────── */
+
+interface AttentionItem {
+  id: string;
+  customer: string;
+  plan: string;
+  amount: number;
+  state: string;
+}
 
 interface Snapshot {
   mrr: number;
@@ -171,13 +36,56 @@ interface Snapshot {
   collected: number;
   plinthFee: number;
   atRisk: number;
-  attention: { id: string; customer: string; plan: string; amount: number; state: string }[];
-  invoices: any[];
+  attention: AttentionItem[];
+  invoices: Invoice[];
   customerNames: Map<string, string>;
 }
 
 const SEVERITY: Record<string, number> = { delinquent: 0, past_due: 1, grace: 2 };
 
+function computeSnapshot(subs: Subscription[], plans: Plan[], invoices: Invoice[], customers: Customer[]): Snapshot {
+  const planById = new Map(plans.map((p) => [p.id, p]));
+  const customerNames = new Map<string, string>(customers.map((c) => [c.id, c.name]));
+
+  const counts: Record<string, number> = {};
+  for (const s of subs) counts[s.state] = (counts[s.state] ?? 0) + 1;
+
+  const amountOf = (s: Subscription) => Number(planById.get(s.plan_id)?.amount_minor ?? 0) * (s.quantity ?? 1);
+
+  const mrr = subs
+    .filter((s) => s.state === 'active' || s.state === 'trialing')
+    .reduce((sum, s) => sum + amountOf(s), 0);
+
+  const risky = subs.filter((s) => s.state in SEVERITY);
+  const atRisk = risky.reduce((sum, s) => sum + amountOf(s), 0);
+
+  const attention = risky
+    .slice()
+    .sort((a, b) => SEVERITY[a.state] - SEVERITY[b.state])
+    .map((s) => ({
+      id: s.id,
+      customer: customerNames.get(s.customer_id) ?? s.customer_id,
+      plan: planById.get(s.plan_id)?.name ?? '—',
+      amount: amountOf(s),
+      state: s.state,
+    }));
+
+  const collected = invoices
+    .filter((inv) => inv.state === 'paid')
+    .reduce((sum, inv) => sum + Number(inv.amount_paid ?? 0), 0);
+
+  return {
+    mrr,
+    counts,
+    totalSubs: subs.length,
+    collected,
+    plinthFee: Math.round(collected * 0.005),
+    atRisk,
+    attention,
+    invoices: invoices.slice(0, 5),
+    customerNames,
+  };
+}
 
 function HeroStat({ label, value, tone }: { label: string; value: string; tone?: 'jade' | 'warn' }) {
   return (
@@ -208,41 +116,31 @@ function BandStat({ label, value, sub }: { label: string; value: number; sub?: s
 }
 
 export default function DashboardPage() {
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showQuickstart, setShowQuickstart] = useState(false);
 
   useEffect(() => {
-    const isNew = localStorage.getItem('plinth_onboarding_shown') !== 'true';
-    if (isNew) setShowOnboarding(true);
+    setShowQuickstart(!isQuickstartDismissed());
   }, []);
 
-  // Use the same SWR keys as the other dashboard pages — navigating from
-  // Subscriptions/Customers to Overview reuses cached data with zero re-fetch.
-  const { data: subsData, isLoading: subsLoading } = useSWR('subscriptions', () => api.subscriptions.list() as Promise<{ data: any[] }>);
-  const { data: plansData, isLoading: plansLoading } = useSWR('plans', () => api.plans.list() as Promise<{ data: any[] }>);
-  const { data: invData, isLoading: invLoading } = useSWR('invoices', () => api.invoices.list() as Promise<{ data: any[] }>);
-  const { data: custsData, isLoading: custsLoading } = useSWR('customers', () => api.customers.list() as Promise<{ data: any[] }>);
+  const subscriptionsQuery = useSubscriptions();
+  const plansQuery = usePlans();
+  const invoicesQuery = useInvoices();
+  const customersQuery = useCustomers();
 
-  const snap = useMemo<Snapshot | null>(() => {
-    if (subsLoading || plansLoading || invLoading || custsLoading) return null;
-    const subs = subsData?.data ?? [];
-    const plans = plansData?.data ?? [];
-    const invoices = invData?.data ?? [];
-    const customers = custsData?.data ?? [];
+  // Mirrors the original's Promise.allSettled: each dataset independently
+  // defaults to [] if its fetch failed, rather than blocking the snapshot.
+  const subs = subscriptionsQuery.data?.data ?? [];
+  const plans = plansQuery.data?.data ?? [];
+  const invoices = invoicesQuery.data?.data ?? [];
+  const customers = customersQuery.data?.data ?? [];
 
-    const planById = new Map(plans.map((p: any) => [p.id, p]));
-    const customerNames = new Map<string, string>(customers.map((c: any) => [c.id, c.name]));
-    const counts: Record<string, number> = {};
-    for (const s of subs) counts[s.state] = (counts[s.state] ?? 0) + 1;
-    const amountOf = (s: any) => Number(planById.get(s.plan_id)?.amount_minor ?? 0) * (s.quantity ?? 1);
-    const mrr = subs.filter((s: any) => s.state === 'active' || s.state === 'trialing').reduce((sum: number, s: any) => sum + amountOf(s), 0);
-    const risky = subs.filter((s: any) => s.state in SEVERITY);
-    const atRisk = risky.reduce((sum: number, s: any) => sum + amountOf(s), 0);
-    const attention = risky
-      .sort((a: any, b: any) => SEVERITY[a.state] - SEVERITY[b.state])
-      .map((s: any) => ({ id: s.id, customer: customerNames.get(s.customer_id) ?? s.customer_id, plan: planById.get(s.plan_id)?.name ?? '—', amount: amountOf(s), state: s.state }));
-    const collected = invoices.filter((inv: any) => inv.state === 'paid').reduce((sum: number, inv: any) => sum + Number(inv.amount_paid ?? 0), 0);
-    return { mrr, counts, totalSubs: subs.length, collected, plinthFee: Math.round(collected * 0.005), atRisk, attention, invoices: invoices.slice(0, 5), customerNames };
-  }, [subsData, plansData, invData, custsData, subsLoading, plansLoading, invLoading, custsLoading]);
+  const isLoading =
+    subscriptionsQuery.isPending || plansQuery.isPending || invoicesQuery.isPending || customersQuery.isPending;
+
+  const snap = useMemo(
+    () => (isLoading ? null : computeSnapshot(subs, plans, invoices, customers)),
+    [isLoading, subs, plans, invoices, customers],
+  );
 
   // Scale the demo trend so it lands exactly on live MRR — one consistent story.
   const trend = useMemo(() => {
@@ -261,18 +159,15 @@ export default function DashboardPage() {
     new Date(),
   );
 
-  function dismissOnboarding() {
-    localStorage.setItem('plinth_onboarding_shown', 'true');
-    setShowOnboarding(false);
-  }
-
-  if (showOnboarding) {
-    return <OnboardingView onDismiss={dismissOnboarding} />;
-  }
-
   return (
     <div className="flex flex-col">
       <Topbar title="Overview" subtitle={monthLabel} />
+
+      {showQuickstart && (
+        <div className="p-6 pb-0">
+          <QuickstartCard onDismiss={() => setShowQuickstart(false)} />
+        </div>
+      )}
 
       {!snap ? (
         /* skeleton — same bones, soft pulse */
@@ -292,7 +187,10 @@ export default function DashboardPage() {
           {/* Row 1 — hero + needs attention */}
           <div className="grid grid-cols-12 gap-4">
             <Rise className="col-span-12 lg:col-span-8">
-              <div className="hero-panel relative flex h-full flex-col overflow-hidden rounded-2xl p-6 pb-0">
+              <div
+                data-tour="mrr-panel"
+                className="hero-panel relative flex h-full flex-col overflow-hidden rounded-2xl p-6 pb-0"
+              >
                 <div className="flex items-start justify-between">
                   <p className="label-mono text-hero-mut">Monthly recurring revenue</p>
                   <span className="rounded-full border border-white/10 px-2 py-[3px] font-mono text-[10px] uppercase tracking-[0.05em] text-hero-mut">
@@ -330,7 +228,7 @@ export default function DashboardPage() {
             </Rise>
 
             <Rise className="col-span-12 lg:col-span-4">
-              <Card className="flex h-full flex-col">
+              <Card data-tour="attention-card" className="flex h-full flex-col">
                 <CardHeader className="flex flex-row items-center justify-between py-3">
                   <CardTitle>Needs attention</CardTitle>
                   {snap.attention.length > 0 && (

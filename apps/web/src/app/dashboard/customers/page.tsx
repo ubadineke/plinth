@@ -1,7 +1,8 @@
 'use client';
-import { useState, useEffect } from 'react';
-import useSWR from 'swr';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useForm, useWatch } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Topbar } from '@/components/layout/topbar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,24 +10,10 @@ import { Input } from '@/components/ui/input';
 import { Table, Thead, Th, Tbody, Tr, Td } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Modal } from '@/components/ui/modal';
-import { api } from '@/lib/api';
+import { useCustomers, useCreateCustomer } from '@/lib/queries/customers';
+import { customerFormSchema, type CustomerFormValues } from '@/lib/schemas/customer';
 import { formatKobo, formatDate } from '@/lib/utils';
 import { Plus } from 'lucide-react';
-
-interface Customer {
-  id: string;
-  external_ref: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  balance: string;
-  created_at: string;
-}
-
-interface ListResponse {
-  object?: string;
-  data: Customer[];
-}
 
 function slugify(value: string): string {
   return value
@@ -37,7 +24,7 @@ function slugify(value: string): string {
 }
 
 export default function CustomersPage() {
-  const { data, isLoading, error, mutate } = useSWR('customers', () => api.customers.list() as Promise<ListResponse>);
+  const { data, isPending, error } = useCustomers();
   const customers = data?.data ?? [];
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -92,7 +79,7 @@ export default function CustomersPage() {
               </tr>
             </Thead>
             <Tbody>
-              {isLoading ? (
+              {isPending ? (
                 <>
                   {Array.from({ length: 6 }).map((_, i) => (
                     <Tr key={i}>
@@ -151,104 +138,120 @@ export default function CustomersPage() {
         </Card>
 
         {/* Footer */}
-        {!isLoading && (
+        {!isPending && (
           <p className="text-xs text-faint">
             {customers.length} customer{customers.length === 1 ? '' : 's'} total
           </p>
         )}
       </div>
 
-      <AddCustomerModal
-        open={showForm}
-        onClose={() => setShowForm(false)}
-        onCreated={() => { setShowForm(false); mutate(); }}
-      />
+      <AddCustomerModal open={showForm} onClose={() => setShowForm(false)} />
     </div>
   );
 }
 
-function AddCustomerModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [externalRef, setExternalRef] = useState('');
+function AddCustomerModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const createCustomer = useCreateCustomer();
+  // useMutation() returns a brand-new object every render (it spreads a
+  // fresh { ...result, mutate, mutateAsync } each time), so it can never sit
+  // in a dependency array without re-running the effect on every keystroke.
+  // Track the latest one in a ref instead.
+  const createCustomerRef = useRef(createCustomer);
+  createCustomerRef.current = createCustomer;
+
   const [externalRefTouched, setExternalRefTouched] = useState(false);
-  const [phone, setPhone] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    control,
+    setValue,
+    reset,
+    formState: { errors, isValid },
+  } = useForm<CustomerFormValues>({
+    resolver: zodResolver(customerFormSchema),
+    mode: 'onChange',
+    defaultValues: { name: '', email: '', externalRef: '', phone: '' },
+  });
 
   useEffect(() => {
     if (!open) return;
-    setName('');
-    setEmail('');
-    setExternalRef('');
+    reset({ name: '', email: '', externalRef: '', phone: '' });
     setExternalRefTouched(false);
-    setPhone('');
-    setError(null);
-  }, [open]);
+    createCustomerRef.current.reset();
+  }, [open, reset]);
+
+  const name = useWatch({ control, name: 'name' });
+  const email = useWatch({ control, name: 'email' });
 
   // Suggest an external_ref from the email/name until the user edits it.
   useEffect(() => {
     if (externalRefTouched) return;
-    const suggestion = email.includes('@') ? email.split('@')[0] : slugify(name);
-    setExternalRef(suggestion);
-  }, [email, name, externalRefTouched]);
+    const suggestion = email?.includes('@') ? email.split('@')[0] : slugify(name ?? '');
+    setValue('externalRef', suggestion, { shouldValidate: false });
+  }, [email, name, externalRefTouched, setValue]);
 
-  const valid =
-    name.trim() !== '' &&
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) &&
-    externalRef.trim() !== '';
+  const externalRefField = register('externalRef');
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!valid || submitting) return;
-    setSubmitting(true);
-    setError(null);
+  const onSubmit = handleSubmit(async (values) => {
     try {
-      await api.customers.create({
-        external_ref: externalRef.trim(),
-        name: name.trim(),
-        email: email.trim(),
-        ...(phone.trim() ? { phone: phone.trim() } : {}),
+      await createCustomer.mutateAsync({
+        external_ref: values.externalRef.trim(),
+        name: values.name.trim(),
+        email: values.email.trim(),
+        ...(values.phone?.trim() ? { phone: values.phone.trim() } : {}),
       });
-      onCreated();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create customer');
-      setSubmitting(false);
+      onClose();
+    } catch {
+      // surfaced via createCustomer.isError/.error below
     }
-  }
+  });
 
   return (
     <Modal open={open} title="New customer" onClose={onClose}>
-      <form onSubmit={submit} className="space-y-4">
+      <form onSubmit={onSubmit} className="space-y-4">
         <div>
-          <label className="block text-xs font-medium text-mid mb-1">Name</label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Acme Inc." required />
+          <label htmlFor="new-customer-name" className="block text-xs font-medium text-mid mb-1">Name</label>
+          <Input id="new-customer-name" {...register('name')} placeholder="Acme Inc." />
+          {errors.name && <p className="text-xs text-danger mt-1">{errors.name.message}</p>}
         </div>
         <div>
-          <label className="block text-xs font-medium text-mid mb-1">Email</label>
-          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="billing@acme.com" required />
+          <label htmlFor="new-customer-email" className="block text-xs font-medium text-mid mb-1">Email</label>
+          <Input id="new-customer-email" type="email" {...register('email')} placeholder="billing@acme.com" />
+          {errors.email && <p className="text-xs text-danger mt-1">{errors.email.message}</p>}
         </div>
         <div>
-          <label className="block text-xs font-medium text-mid mb-1">External Ref</label>
+          <label htmlFor="new-customer-external-ref" className="block text-xs font-medium text-mid mb-1">External Ref</label>
           <Input
-            value={externalRef}
-            onChange={(e) => { setExternalRef(e.target.value); setExternalRefTouched(true); }}
+            id="new-customer-external-ref"
+            {...externalRefField}
+            onChange={(e) => {
+              setExternalRefTouched(true);
+              externalRefField.onChange(e);
+            }}
             placeholder="your-internal-id"
-            required
           />
-          <p className="text-xs text-faint mt-1">Your merchant-side identifier for this customer.</p>
+          {errors.externalRef ? (
+            <p className="text-xs text-danger mt-1">{errors.externalRef.message}</p>
+          ) : (
+            <p className="text-xs text-faint mt-1">Your merchant-side identifier for this customer.</p>
+          )}
         </div>
         <div>
-          <label className="block text-xs font-medium text-mid mb-1">Phone <span className="text-faint">(optional)</span></label>
-          <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+234…" />
+          <label htmlFor="new-customer-phone" className="block text-xs font-medium text-mid mb-1">Phone <span className="text-faint">(optional)</span></label>
+          <Input id="new-customer-phone" {...register('phone')} placeholder="+234…" />
         </div>
 
-        {error && <p className="text-sm text-danger">{error}</p>}
+        {createCustomer.isError && (
+          <p className="text-sm text-danger">
+            {createCustomer.error instanceof Error ? createCustomer.error.message : 'Failed to create customer'}
+          </p>
+        )}
 
         <div className="flex items-center justify-end gap-2 pt-1">
           <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button type="submit" disabled={!valid || submitting}>
-            {submitting ? 'Creating…' : 'Create customer'}
+          <Button type="submit" disabled={!isValid || createCustomer.isPending}>
+            {createCustomer.isPending ? 'Creating…' : 'Create customer'}
           </Button>
         </div>
       </form>

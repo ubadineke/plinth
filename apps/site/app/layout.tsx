@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import RiveCursor from "@/components/RiveCursor";
 import ScrollSnap from "@/components/ScrollSnap";
+import { SITE_URL, SITE_NAME, SITE_TITLE, SITE_DESCRIPTION } from "@/lib/site";
 
 /* Fonts are plain @font-face in globals.css (self-hosted in /public/fonts)
    rather than next/font, so the REAL family names stay usable from canvas
@@ -14,9 +15,26 @@ const PRELOAD_FONTS = [
 ];
 
 export const metadata: Metadata = {
-  title: "Plinth — The base your billing stands on.",
-  description:
-    "Recurring-payments infrastructure for Nigeria. Subscriptions, recurring billing, and automatic reconciliation — built for how Nigeria actually pays. Powered by Nomba.",
+  metadataBase: new URL(SITE_URL),
+  title: SITE_TITLE,
+  description: SITE_DESCRIPTION,
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "/",
+    siteName: SITE_NAME,
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

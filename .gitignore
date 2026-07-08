@@ -16,6 +16,10 @@ out/
 # Test & coverage
 coverage/
 *.js.map
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
 
 # DB / migrations scratch
 .drizzle/
@@ -30,6 +34,9 @@ Thumbs.db
 
 # Next.js
 next-env.d.ts
+
+# TypeScript incremental build cache
+*.tsbuildinfo
 
 # pnpm
 .pnpm-debug.log*

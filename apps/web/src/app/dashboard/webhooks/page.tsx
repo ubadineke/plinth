@@ -1,13 +1,25 @@
 'use client';
 import { useState } from 'react';
-import useSWR from 'swr';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Topbar } from '@/components/layout/topbar';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { api, type WebhookEndpoint, type WebhookDelivery } from '@/lib/api';
+import { Input } from '@/components/ui/input';
 import { formatRelativeDate } from '@/lib/utils';
+import {
+  useWebhookEndpoints,
+  useWebhookDeliveries,
+  useCreateWebhookEndpoint,
+  useToggleWebhookEndpoint,
+  useRotateWebhookSecret,
+  useRemoveWebhookEndpoint,
+  useResendWebhookDelivery,
+} from '@/lib/queries/webhook-endpoints';
+import { webhookEndpointSchema, type WebhookEndpointFormValues } from '@/lib/schemas/webhook-endpoint';
+import type { WebhookEndpoint } from '@/lib/api';
 import { Plus, RefreshCw, Trash2, KeyRound, ChevronDown, ChevronRight, Copy, Check, Webhook } from 'lucide-react';
 
 const DELIVERY_STATUS: Record<string, 'delivered' | 'pending' | 'failed' | 'active'> = {
@@ -15,46 +27,61 @@ const DELIVERY_STATUS: Record<string, 'delivered' | 'pending' | 'failed' | 'acti
 };
 
 export default function WebhooksPage() {
-  const { data, isLoading, mutate } = useSWR('webhook-endpoints', () => api.webhookEndpoints.list());
-  const endpoints: WebhookEndpoint[] = data?.data ?? [];
-
   const [adding, setAdding] = useState(false);
-  const [url, setUrl] = useState('');
-  const [description, setDescription] = useState('');
   const [revealed, setRevealed] = useState<{ id: string; secret: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [deliveries, setDeliveries] = useState<{ counts: Record<string, number>; data: WebhookDelivery[] } | null>(null);
 
-  async function create() {
-    if (!url.trim()) return;
-    const e = await api.webhookEndpoints.create({ url: url.trim(), description: description.trim() || undefined });
-    if (e.secret) setRevealed({ id: e.id, secret: e.secret });
-    setUrl(''); setDescription(''); setAdding(false);
-    mutate();
+  const endpointsQuery = useWebhookEndpoints();
+  const endpoints = endpointsQuery.data?.data ?? [];
+  const isLoading = endpointsQuery.isPending;
+
+  const createEndpoint = useCreateWebhookEndpoint();
+  const toggleEndpoint = useToggleWebhookEndpoint();
+  const rotateSecret = useRotateWebhookSecret();
+  const removeEndpoint = useRemoveWebhookEndpoint();
+  const resendDelivery = useResendWebhookDelivery();
+
+  const deliveriesQuery = useWebhookDeliveries(expanded ?? undefined, expanded !== null);
+  const deliveries = deliveriesQuery.data ?? null;
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { isValid },
+  } = useForm<WebhookEndpointFormValues>({
+    resolver: zodResolver(webhookEndpointSchema),
+    mode: 'onChange',
+    defaultValues: { url: '', description: '' },
+  });
+
+  async function submitCreate(values: WebhookEndpointFormValues) {
+    try {
+      const e = await createEndpoint.mutateAsync({
+        url: values.url,
+        ...(values.description ? { description: values.description } : {}),
+      });
+      if (e.secret) setRevealed({ id: e.id, secret: e.secret });
+      reset({ url: '', description: '' });
+      setAdding(false);
+    } catch {
+      // surfaced via createEndpoint.isError/.error below
+    }
   }
 
-  async function toggle(e: WebhookEndpoint) {
-    await api.webhookEndpoints.update(e.id, { enabled: !e.enabled });
-    mutate();
-  }
   async function rotate(id: string) {
-    const e = await api.webhookEndpoints.rotate(id);
+    const e = await rotateSecret.mutateAsync(id);
     if (e.secret) setRevealed({ id: e.id, secret: e.secret });
   }
+
   async function remove(id: string) {
-    await api.webhookEndpoints.remove(id);
+    await removeEndpoint.mutateAsync(id);
     if (expanded === id) setExpanded(null);
-    mutate();
   }
-  async function openDeliveries(id: string) {
-    if (expanded === id) { setExpanded(null); return; }
-    setExpanded(id); setDeliveries(null);
-    setDeliveries(await api.webhookEndpoints.deliveries(id));
-  }
-  async function resend(endpointId: string, deliveryId: string) {
-    await api.webhookEndpoints.resend(endpointId, deliveryId);
-    setDeliveries(await api.webhookEndpoints.deliveries(endpointId));
+
+  function openDeliveries(id: string) {
+    setExpanded(expanded === id ? null : id);
   }
 
   function copySecret(secret: string) {
@@ -95,21 +122,28 @@ export default function WebhooksPage() {
 
         {/* add form */}
         {adding && (
-          <Card className="p-4 space-y-3">
-            <div>
-              <label className="block text-xs font-medium text-body mb-1.5">Endpoint URL</label>
-              <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://yourapp.com/api/plinth/webhook"
-                className="w-full text-sm rounded-lg border border-line bg-card px-3 py-2 outline-none focus:ring-2 focus:ring-jade/25" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-body mb-1.5">Description (optional)</label>
-              <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Production consumer"
-                className="w-full text-sm rounded-lg border border-line bg-card px-3 py-2 outline-none focus:ring-2 focus:ring-jade/25" />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => setAdding(false)}>Cancel</Button>
-              <Button size="sm" disabled={!url.trim()} onClick={create}>Create endpoint</Button>
-            </div>
+          <Card className="p-4">
+            <form onSubmit={handleSubmit(submitCreate)} className="space-y-3">
+              <div>
+                <label htmlFor="new-endpoint-url" className="block text-xs font-medium text-body mb-1.5">Endpoint URL</label>
+                <Input id="new-endpoint-url" {...register('url')} placeholder="https://yourapp.com/api/plinth/webhook" />
+              </div>
+              <div>
+                <label htmlFor="new-endpoint-description" className="block text-xs font-medium text-body mb-1.5">Description (optional)</label>
+                <Input id="new-endpoint-description" {...register('description')} placeholder="Production consumer" />
+              </div>
+              {createEndpoint.isError && (
+                <p className="text-xs text-danger">
+                  {createEndpoint.error instanceof Error ? createEndpoint.error.message : 'Failed to create endpoint'}
+                </p>
+              )}
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => setAdding(false)}>Cancel</Button>
+                <Button type="submit" size="sm" disabled={!isValid || createEndpoint.isPending}>
+                  {createEndpoint.isPending ? 'Creating…' : 'Create endpoint'}
+                </Button>
+              </div>
+            </form>
           </Card>
         )}
 
@@ -132,10 +166,14 @@ export default function WebhooksPage() {
               <p className="mt-2 text-sm text-faint">No webhook endpoints yet.</p>
               <p className="text-xs text-faint">Add one to receive signed events.</p>
             </div>
-          ) : endpoints.map((e) => (
+          ) : endpoints.map((e: WebhookEndpoint) => (
             <div key={e.id}>
               <div className="px-4 py-3 flex items-center gap-3">
-                <button onClick={() => openDeliveries(e.id)} className="text-faint shrink-0">
+                <button
+                  onClick={() => openDeliveries(e.id)}
+                  aria-label={expanded === e.id ? 'Hide deliveries' : 'Show deliveries'}
+                  className="text-faint shrink-0"
+                >
                   {expanded === e.id ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                 </button>
                 <div className="flex-1 min-w-0">
@@ -145,7 +183,7 @@ export default function WebhooksPage() {
                   </p>
                 </div>
                 <Badge status={e.enabled ? 'delivered' : 'pending'} label={e.enabled ? 'enabled' : 'disabled'} />
-                <Button variant="ghost" size="sm" onClick={() => toggle(e)}>{e.enabled ? 'Disable' : 'Enable'}</Button>
+                <Button variant="ghost" size="sm" onClick={() => toggleEndpoint.mutate({ id: e.id, enabled: !e.enabled })}>{e.enabled ? 'Disable' : 'Enable'}</Button>
                 <Button variant="ghost" size="sm" onClick={() => rotate(e.id)}><KeyRound size={12} /> Rotate</Button>
                 <Button variant="ghost" size="sm" onClick={() => remove(e.id)} className="text-danger"><Trash2 size={12} /></Button>
               </div>
@@ -179,7 +217,7 @@ export default function WebhooksPage() {
                             <Badge status={DELIVERY_STATUS[d.status] ?? 'pending'} label={d.status} />
                             <span className="text-xs text-faint whitespace-nowrap shrink-0 w-20 text-right">{formatRelativeDate(d.created_at)}</span>
                             {(d.status === 'failed' || d.status === 'retrying') && (
-                              <Button variant="ghost" size="sm" onClick={() => resend(e.id, d.id)}><RefreshCw size={11} /> Resend</Button>
+                              <Button variant="ghost" size="sm" onClick={() => resendDelivery.mutate({ endpointId: e.id, deliveryId: d.id })}><RefreshCw size={11} /> Resend</Button>
                             )}
                           </div>
                         ))}

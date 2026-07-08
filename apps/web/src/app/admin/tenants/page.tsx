@@ -1,34 +1,25 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { ThemeToggle } from '@/components/layout/theme-toggle';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, Thead, Th, Tbody, Tr, Td } from '@/components/ui/table';
 import { Modal, Drawer } from '@/components/ui/modal';
-import { api } from '@/lib/api';
+import {
+  useAdminApplications,
+  useApproveApplication,
+  useRejectApplication,
+  type Application,
+  type AppStatus,
+} from '@/lib/queries/admin-applications';
+import { rejectApplicationSchema, type RejectApplicationFormValues } from '@/lib/schemas/admin-application';
 import { X, CheckCircle, XCircle, Clock, ExternalLink, Copy, Check, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-type AppStatus = 'pending' | 'approved' | 'rejected';
-interface Application {
-  id: string;
-  businessName: string;
-  contactName: string;
-  email: string;
-  rcNumber: string | null;
-  website: string | null;
-  description: string;
-  status: AppStatus;
-  nombaSubAccountId: string | null;
-  tenantId: string | null;
-  rejectionReason: string | null;
-  reviewedAt: string | null;
-  createdAt: string;
-}
 
 const STATUS_TABS: { label: string; value: AppStatus | 'all' }[] = [
   { label: 'All', value: 'all' },
@@ -59,8 +50,10 @@ const TEST_SUB_ACCOUNT_ID = 'f683ffd8-5ed3-41c0-bd9d-dcb1f24f0d22';
 
 export default function AdminTenantsPage() {
   const [tab, setTab] = useState<AppStatus | 'all'>('all');
-  const [applications, setApplications] = useState<Application[]>([]);
-  const [loading, setLoading] = useState(true);
+  const applicationsQuery = useAdminApplications();
+  const applications = applicationsQuery.data?.data ?? [];
+  const loading = applicationsQuery.isPending;
+
   const [selected, setSelected] = useState<Application | null>(null);
   // Kept around during the drawer's close animation so the body doesn't blank out mid-exit.
   const [drawerData, setDrawerData] = useState<Application | null>(null);
@@ -70,8 +63,6 @@ export default function AdminTenantsPage() {
   const [approveMode, setApproveMode] = useState(false);
   const [rejectMode, setRejectMode] = useState(false);
   const [subAccountId, setSubAccountId] = useState('');
-  const [rejectReason, setRejectReason] = useState('');
-  const [saving, setSaving] = useState(false);
   const [approvalResult, setApprovalResult] = useState<{ tenantId: string; email: string } | null>(null);
   const [cachedApprovalResult, setCachedApprovalResult] = useState<{ tenantId: string; email: string } | null>(null);
   const [copied, setCopied] = useState<'tenantId' | null>(null);
@@ -80,12 +71,18 @@ export default function AdminTenantsPage() {
     if (approvalResult) setCachedApprovalResult(approvalResult);
   }, [approvalResult]);
 
-  useEffect(() => {
-    api.adminApplications.list()
-      .then((res: any) => setApplications(res.data ?? []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+  const approveApplication = useApproveApplication();
+  const rejectApplication = useRejectApplication();
+
+  const {
+    register: registerReject,
+    handleSubmit: handleSubmitReject,
+    reset: resetReject,
+    formState: { errors: rejectErrors },
+  } = useForm<RejectApplicationFormValues>({
+    resolver: zodResolver(rejectApplicationSchema),
+    defaultValues: { reason: '' },
+  });
 
   const isSubAccountTaken = applications.some((a) => a.status === 'approved' && a.nombaSubAccountId !== null);
 
@@ -97,49 +94,31 @@ export default function AdminTenantsPage() {
     setApproveMode(false);
     setRejectMode(false);
     setSubAccountId(TEST_SUB_ACCOUNT_ID);
-    setRejectReason('');
+    resetReject({ reason: '' });
   }
 
   async function handleApprove() {
     if (!selected || !subAccountId.trim()) return;
-    setSaving(true);
     try {
-      const result = await api.adminApplications.approve(selected.id, subAccountId.trim());
-      setApplications((prev) =>
-        prev.map((a) =>
-          a.id === selected.id
-            ? { ...a, status: 'approved', nombaSubAccountId: subAccountId, tenantId: result.tenantId, reviewedAt: new Date().toISOString() }
-            : a,
-        ),
-      );
+      const result = await approveApplication.mutateAsync({ id: selected.id, subAccountId: subAccountId.trim() });
       setApprovalResult({ tenantId: result.tenantId, email: selected.email });
       setSelected(null);
-    } catch (err: any) {
-      alert(`Approval failed: ${err.message}`);
-    } finally {
-      setSaving(false);
+    } catch (err) {
+      alert(`Approval failed: ${err instanceof Error ? err.message : 'unknown error'}`);
     }
   }
 
-  async function handleReject() {
-    if (!selected || !rejectReason.trim()) return;
-    setSaving(true);
+  const onReject = handleSubmitReject(async (values) => {
+    if (!selected) return;
     try {
-      await api.adminApplications.reject(selected.id, rejectReason.trim());
-      setApplications((prev) =>
-        prev.map((a) =>
-          a.id === selected.id
-            ? { ...a, status: 'rejected', rejectionReason: rejectReason, reviewedAt: new Date().toISOString() }
-            : a,
-        ),
-      );
+      await rejectApplication.mutateAsync({ id: selected.id, reason: values.reason });
       setSelected(null);
-    } catch (err: any) {
-      alert(`Rejection failed: ${err.message}`);
-    } finally {
-      setSaving(false);
+    } catch (err) {
+      alert(`Rejection failed: ${err instanceof Error ? err.message : 'unknown error'}`);
     }
-  }
+  });
+
+  const saving = approveApplication.isPending || rejectApplication.isPending;
 
   function copyField(field: 'tenantId', value: string) {
     navigator.clipboard.writeText(value);
@@ -320,7 +299,11 @@ export default function AdminTenantsPage() {
               </div>
               <div className="flex items-center gap-2">
                 {statusBadge(drawerData.status)}
-                <button onClick={() => setSelected(null)} className="text-faint hover:text-mid ml-2">
+                <button
+                  onClick={() => setSelected(null)}
+                  aria-label="Close"
+                  className="text-faint hover:text-mid ml-2"
+                >
                   <X size={18} />
                 </button>
               </div>
@@ -407,8 +390,8 @@ export default function AdminTenantsPage() {
                   ) : (
                     <>
                       <div>
-                        <label className="block text-xs font-medium text-body mb-1.5">Nomba sub-account ID</label>
-                        <Input value={subAccountId} readOnly className="font-mono text-xs bg-soft cursor-default" />
+                        <label htmlFor="approve-sub-account-id" className="block text-xs font-medium text-body mb-1.5">Nomba sub-account ID</label>
+                        <Input id="approve-sub-account-id" value={subAccountId} readOnly className="font-mono text-xs bg-soft cursor-default" />
                       </div>
                       <div className="flex gap-2">
                         <Button onClick={handleApprove} disabled={saving} className="flex-1">
@@ -429,19 +412,20 @@ export default function AdminTenantsPage() {
                 <section className="space-y-3">
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-faint">Reject application</h3>
                   <div>
-                    <label className="block text-xs font-medium text-body mb-1.5">Reason (will be sent to applicant)</label>
+                    <label htmlFor="reject-reason" className="block text-xs font-medium text-body mb-1.5">Reason (will be sent to applicant)</label>
                     <textarea
+                      id="reject-reason"
                       rows={3}
                       placeholder="E.g. Insufficient business information. Please provide a valid RC number."
-                      value={rejectReason}
-                      onChange={(e) => setRejectReason(e.target.value)}
+                      {...registerReject('reason')}
                       className="w-full rounded-lg border border-line bg-card px-3 py-2 text-sm text-ink placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-danger/30 resize-none"
                     />
+                    {rejectErrors.reason && <p className="text-xs text-danger mt-1">{rejectErrors.reason.message}</p>}
                   </div>
                   <div className="flex gap-2">
                     <Button
-                      onClick={handleReject}
-                      disabled={!rejectReason.trim() || saving}
+                      onClick={onReject}
+                      disabled={saving}
                       variant="destructive"
                       className="flex-1"
                     >

@@ -1,31 +1,19 @@
 'use client';
-import { useState } from 'react';
-import useSWR from 'swr';
 import { Topbar } from '@/components/layout/topbar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { api } from '@/lib/api';
+import { useSubscriptions } from '@/lib/queries/subscriptions';
+import { useCustomers } from '@/lib/queries/customers';
+import { usePlans } from '@/lib/queries/plans';
+import { useNotifications, useSendReminder } from '@/lib/queries/notifications';
+import { usePolicy } from '@/lib/queries/policy';
+import { useClock } from '@/lib/queries/clock';
+import type { Subscription } from '@/lib/types';
 import { formatKobo, formatDate, cn } from '@/lib/utils';
 import { Bell, Check, X } from 'lucide-react';
 
-interface Subscription {
-  id: string;
-  customer_id: string;
-  plan_id: string;
-  state: string;
-  quantity: number;
-  preferred_rail: string;
-  metadata: Record<string, unknown>;
-}
-interface Customer { id: string; name: string }
-interface Plan { id: string; name: string; amount_minor: string }
-interface Notification { id: string; customer_id: string; event_type: string | null; created_at: string }
-interface ListResponse<T> { object: 'list'; data: T[] }
-
-type ReminderState = 'idle' | 'sending' | 'sent' | 'failed';
-
-function str(meta: Record<string, unknown>, key: string): string | null {
+function str(meta: Record<string, unknown> | undefined, key: string): string | null {
   const v = meta?.[key];
   return typeof v === 'string' ? v : null;
 }
@@ -54,33 +42,32 @@ function GraceDaysBar({ daysRemaining, graceDays }: { daysRemaining: number; gra
 }
 
 export default function DunningPage() {
-  // Shared SWR keys — subscriptions/customers/plans reuse cache from other pages
-  const { data: subsData, isLoading: subsLoading } = useSWR('subscriptions', () => api.subscriptions.list() as Promise<ListResponse<Subscription>>);
-  const { data: custData } = useSWR('customers', () => api.customers.list() as Promise<ListResponse<Customer>>);
-  const { data: planData } = useSWR('plans', () => api.plans.list() as Promise<ListResponse<Plan>>);
-  const { data: notifData } = useSWR('notifications', () => (api.notifications.list() as Promise<ListResponse<Notification>>).catch(() => ({ data: [] as Notification[] })));
-  const { data: policyData } = useSWR('policy', () => (api.policy.get() as Promise<{ grace_days?: number }>).catch(() => null));
-  const { data: clockData } = useSWR('clock', () => (api.clock.get() as Promise<{ simulated_now: string | null }>).catch(() => null));
+  const subscriptionsQuery = useSubscriptions();
+  const customersQuery = useCustomers();
+  const plansQuery = usePlans();
+  const notificationsQuery = useNotifications(undefined, true);
+  const policyQuery = usePolicy();
+  const clockQuery = useClock();
 
-  const loading = subsLoading;
-  const subs: Subscription[] = subsData?.data ?? [];
-  const names: Record<string, string> = Object.fromEntries((custData?.data ?? []).map((c) => [c.id, c.name]));
-  const plans: Record<string, Plan> = Object.fromEntries((planData?.data ?? []).map((p) => [p.id, p]));
-  const recovered: Notification[] = (notifData?.data ?? []).filter((n) => n.event_type === 'recovered').slice(0, 10);
-  const graceDays: number = policyData?.grace_days ?? 7;
-  const now: Date = clockData?.simulated_now ? new Date(clockData.simulated_now) : new Date();
+  const subs = subscriptionsQuery.data?.data ?? [];
+  const names: Record<string, string> = {};
+  for (const c of customersQuery.data?.data ?? []) names[c.id] = c.name;
+  const plans: Record<string, { id: string; name: string; amount_minor: string }> = {};
+  for (const p of plansQuery.data?.data ?? []) plans[p.id] = p;
+  const recovered = (notificationsQuery.data?.data ?? [])
+    .filter((n) => n.event_type === 'recovered')
+    .slice(0, 10);
+  const graceDays = policyQuery.data?.grace_days ?? 7;
+  const now = clockQuery.data?.simulated_now ? new Date(clockQuery.data.simulated_now) : new Date();
 
-  const [reminders, setReminders] = useState<Record<string, ReminderState>>({});
-
-  async function sendReminder(customerId: string) {
-    setReminders((r) => ({ ...r, [customerId]: 'sending' }));
-    try {
-      const res: any = await api.notifications.remind(customerId);
-      setReminders((r) => ({ ...r, [customerId]: res.ok ? 'sent' : 'failed' }));
-    } catch {
-      setReminders((r) => ({ ...r, [customerId]: 'failed' }));
-    }
-  }
+  const loading =
+    subscriptionsQuery.isPending ||
+    customersQuery.isPending ||
+    plansQuery.isPending ||
+    notificationsQuery.isPending ||
+    policyQuery.isPending ||
+    clockQuery.isPending;
+  const error = subscriptionsQuery.error instanceof Error ? subscriptionsQuery.error.message : null;
 
   const amountOf = (s: Subscription): number => {
     const p = plans[s.plan_id];
@@ -94,20 +81,23 @@ export default function DunningPage() {
 
   const totalAtRisk = [...pastDue, ...grace, ...delinquent].reduce((sum, s) => sum + amountOf(s), 0);
 
+  // One useSendReminder() call per row gives each button its own independent
+  // pending/success/error state — a shared mutation instance would make every
+  // row flash "sent" together when only one customer's reminder went out.
   function ReminderButton({ customerId }: { customerId: string }) {
-    const state = reminders[customerId] ?? 'idle';
+    const sendReminder = useSendReminder();
     return (
       <Button
         variant="outline"
         size="sm"
         className="mt-3 w-full text-xs"
-        disabled={state === 'sending'}
-        onClick={() => sendReminder(customerId)}
+        disabled={sendReminder.isPending}
+        onClick={() => sendReminder.mutate(customerId)}
         title="Send this customer a payment reminder by SMS + email"
       >
-        {state === 'sending' ? 'Sending…'
-          : state === 'sent' ? <><Check size={12} /> Reminder sent</>
-          : state === 'failed' ? <><X size={12} /> Failed — retry</>
+        {sendReminder.isPending ? 'Sending…'
+          : sendReminder.isSuccess ? <><Check size={12} /> Reminder sent</>
+          : sendReminder.isError ? <><X size={12} /> Failed — retry</>
           : <><Bell size={12} /> Send reminder</>}
       </Button>
     );
@@ -236,7 +226,7 @@ export default function DunningPage() {
               {recovered.length === 0 && <p className="text-xs text-faint">No recent recoveries</p>}
               {recovered.map((n, i) => (
                 <Card key={n.id} className="p-4 border-jade/20 animate-row-in" style={{ animationDelay: `${i * 40}ms` }}>
-                  <p className="text-sm font-medium text-ink">{names[n.customer_id] ?? n.customer_id}</p>
+                  <p className="text-sm font-medium text-ink">{names[n.customer_id ?? ''] ?? n.customer_id}</p>
                   <p className="text-xs text-jade-deep mt-1">Payment recovered</p>
                   <p className="text-xs text-faint mt-1">{formatDate(n.created_at)}</p>
                 </Card>

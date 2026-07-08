@@ -1,6 +1,7 @@
 'use client';
-import { useState, useEffect } from 'react';
-import useSWR from 'swr';
+import { useEffect, useRef, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Topbar } from '@/components/layout/topbar';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +13,21 @@ import { Table, Thead, Th, Tbody, Tr, Td } from '@/components/ui/table';
 import { Modal } from '@/components/ui/modal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatKobo, formatDate } from '@/lib/utils';
-import { api } from '@/lib/api';
+import {
+  useSubscriptions,
+  useCreateSubscription,
+  useCheckoutLink,
+  useSimulatePayment,
+} from '@/lib/queries/subscriptions';
+import { useCustomers } from '@/lib/queries/customers';
+import { usePlans, type Plan } from '@/lib/queries/plans';
+import { useClock, useAdvanceClock, useRunTick } from '@/lib/queries/clock';
+import {
+  createSubscriptionSchema,
+  type CreateSubscriptionFormInput,
+  type CreateSubscriptionFormValues,
+} from '@/lib/schemas/subscription';
+import type { Customer, Subscription } from '@/lib/types';
 import { MoreHorizontal, Plus, Play, FastForward, Copy, Check, CreditCard } from 'lucide-react';
 
 const FILTER_TABS = [
@@ -26,48 +41,28 @@ const FILTER_TABS = [
   { id: 'canceled', label: 'Canceled' },
 ];
 
-interface Subscription {
-  id: string;
-  customer_id: string;
-  plan_id: string;
-  state: string;
-  quantity: number;
-  preferred_rail: string;
-  current_period_end: string;
-  next_bill_at: string;
-  trial_end_at: string | null;
-  created_at: string;
-}
-interface Customer { id: string; name: string; email: string }
-interface Plan { id: string; name: string; amount_minor: string; interval: string }
-
 export default function SubscriptionsPage() {
   const [activeTab, setActiveTab] = useState('all');
   const [notice, setNotice] = useState('');
-  const [busy, setBusy] = useState(false);
   const [clockDays, setClockDays] = useState('30');
-  const [simNow, setSimNow] = useState<string | null>(null);
-
   const [showCreate, setShowCreate] = useState(false);
   const [actionSub, setActionSub] = useState<Subscription | null>(null);
 
-  const { data: subsData, isLoading: subsLoading, mutate: mutateSubs } = useSWR('subscriptions', () => api.subscriptions.list() as Promise<{ data: Subscription[] }>);
-  const { data: custsData, isLoading: custsLoading } = useSWR('customers', () => api.customers.list() as Promise<{ data: Customer[] }>);
-  const { data: plansData, isLoading: plansLoading } = useSWR('plans', () => api.plans.list() as Promise<{ data: Plan[] }>);
+  const subscriptionsQuery = useSubscriptions();
+  const customersQuery = useCustomers();
+  const plansQuery = usePlans();
+  const clockQuery = useClock();
+  const runTick = useRunTick();
+  const advanceClock = useAdvanceClock();
 
-  const subs = subsData?.data ?? [];
-  const customers = custsData?.data ?? [];
-  const plans = plansData?.data ?? [];
-  const loading = subsLoading || custsLoading || plansLoading;
+  const subs = subscriptionsQuery.data?.data ?? [];
+  const customers = customersQuery.data?.data ?? [];
+  const plans = plansQuery.data?.data ?? [];
+  const simNow = clockQuery.data?.simulated_now ?? null;
 
-  async function refreshClock() {
-    try {
-      const c: any = await api.clock.get();
-      setSimNow(c?.simulated_now ?? null);
-    } catch { /* clock endpoint optional */ }
-  }
-
-  useEffect(() => { refreshClock(); }, []);
+  const loading = subscriptionsQuery.isPending || customersQuery.isPending || plansQuery.isPending;
+  const error = subscriptionsQuery.error instanceof Error ? subscriptionsQuery.error.message : '';
+  const busy = runTick.isPending || advanceClock.isPending;
 
   const customerById = Object.fromEntries(customers.map((c) => [c.id, c]));
   const planById = Object.fromEntries(plans.map((p) => [p.id, p]));
@@ -79,33 +74,23 @@ export default function SubscriptionsPage() {
     setTimeout(() => setNotice(''), 4000);
   }
 
-  async function runTick() {
-    setBusy(true);
+  async function handleRunTick() {
     try {
-      const res: any = await api.tick.run();
+      const res = await runTick.mutateAsync();
       flash(`Billing tick ran${res?.renewed != null ? ` — ${res.renewed} renewed` : ''}.`);
-      await mutateSubs();
-      await refreshClock();
-    } catch (err: any) {
-      flash(`Tick failed: ${err.message}`);
-    } finally {
-      setBusy(false);
+    } catch (e) {
+      flash(`Tick failed: ${e instanceof Error ? e.message : 'unknown error'}`);
     }
   }
 
-  async function advanceClock() {
+  async function handleAdvanceClock() {
     const days = Number(clockDays);
     if (!Number.isFinite(days) || days <= 0) { flash('Enter a positive number of days.'); return; }
-    setBusy(true);
     try {
-      await api.clock.advance(Math.round(days * 24 * 60 * 60));
+      await advanceClock.mutateAsync(Math.round(days * 24 * 60 * 60));
       flash(`Clock advanced ${days} day${days === 1 ? '' : 's'}. Run a billing tick to charge due subscriptions.`);
-      await mutateSubs();
-      await refreshClock();
-    } catch (err: any) {
-      flash(`Advance failed: ${err.message}`);
-    } finally {
-      setBusy(false);
+    } catch (e) {
+      flash(`Advance failed: ${e instanceof Error ? e.message : 'unknown error'}`);
     }
   }
 
@@ -125,21 +110,21 @@ export default function SubscriptionsPage() {
                 min={1}
                 value={clockDays}
                 onChange={(e) => setClockDays(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter' && !busy) advanceClock(); }}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !busy) handleAdvanceClock(); }}
                 disabled={busy}
                 className="w-14 text-sm text-right font-mono bg-transparent px-2 py-1.5 outline-none tabular-nums disabled:opacity-60"
                 aria-label="Days to advance"
               />
               <span className="text-xs text-faint pr-2 select-none">days</span>
               <button
-                onClick={advanceClock}
+                onClick={handleAdvanceClock}
                 disabled={busy}
                 className="flex items-center gap-1.5 text-sm px-3 py-1.5 border-l border-line text-body hover:bg-soft disabled:opacity-60 transition-colors"
               >
                 <FastForward size={14} /> Advance
               </button>
             </div>
-            <Button variant="outline" size="sm" onClick={runTick} disabled={busy}>
+            <Button variant="outline" size="sm" onClick={handleRunTick} disabled={busy}>
               <Play size={14} /> Run billing tick
             </Button>
             <Button size="sm" onClick={() => setShowCreate(true)} disabled={customers.length === 0 || plans.length === 0}>
@@ -227,12 +212,16 @@ export default function SubscriptionsPage() {
                       </Td>
                       <Td>{plan?.name ?? sub.plan_id}{sub.quantity > 1 && <span className="text-faint"> ×{sub.quantity}</span>}</Td>
                       <Td className="text-right font-mono text-[13px] font-medium text-ink">{formatKobo(amount)}</Td>
-                      <Td><Badge status={sub.preferred_rail} /></Td>
+                      <Td>{sub.preferred_rail && <Badge status={sub.preferred_rail} />}</Td>
                       <Td><Badge status={sub.state} /></Td>
-                      <Td className="text-mid">{formatDate(sub.next_bill_at)}</Td>
-                      <Td className="text-mid">{formatDate(sub.created_at)}</Td>
+                      <Td className="text-mid">{sub.next_bill_at ? formatDate(sub.next_bill_at) : '—'}</Td>
+                      <Td className="text-mid">{sub.created_at ? formatDate(sub.created_at) : '—'}</Td>
                       <Td>
-                        <button onClick={() => setActionSub(sub)} className="text-faint hover:text-mid">
+                        <button
+                          onClick={() => setActionSub(sub)}
+                          aria-label="Subscription actions"
+                          className="text-faint hover:text-mid"
+                        >
                           <MoreHorizontal size={16} />
                         </button>
                       </Td>
@@ -255,7 +244,7 @@ export default function SubscriptionsPage() {
         customers={customers}
         plans={plans}
         onClose={() => setShowCreate(false)}
-        onCreated={async () => { setShowCreate(false); flash('Subscription created.'); await mutateSubs(); }}
+        onCreated={() => { setShowCreate(false); flash('Subscription created.'); }}
       />
 
       <SubscriptionActionsModal
@@ -264,7 +253,6 @@ export default function SubscriptionsPage() {
         customer={actionSub ? customerById[actionSub.customer_id] : undefined}
         plan={actionSub ? planById[actionSub.plan_id] : undefined}
         onClose={() => setActionSub(null)}
-        onChanged={async () => { await mutateSubs(); }}
         flash={flash}
       />
     </div>
@@ -280,86 +268,96 @@ function CreateSubscriptionModal({
   onClose: () => void;
   onCreated: () => void;
 }) {
-  const [customerId, setCustomerId] = useState(customers[0]?.id ?? '');
-  const [planId, setPlanId] = useState(plans[0]?.id ?? '');
-  const [quantity, setQuantity] = useState(1);
-  const [rail, setRail] = useState<'card' | 'transfer' | 'direct_debit'>('card');
-  const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState('');
+  const createSubscription = useCreateSubscription();
+  const createSubscriptionRef = useRef(createSubscription);
+  createSubscriptionRef.current = createSubscription;
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { isValid },
+  } = useForm<CreateSubscriptionFormInput, any, CreateSubscriptionFormValues>({
+    resolver: zodResolver(createSubscriptionSchema),
+    mode: 'onChange',
+    defaultValues: { customerId: '', planId: '', quantity: 1, rail: 'card' },
+  });
 
   useEffect(() => {
     if (!open) return;
-    setCustomerId(customers[0]?.id ?? '');
-    setPlanId(plans[0]?.id ?? '');
-    setQuantity(1);
-    setRail('card');
-    setErr('');
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+    reset({ customerId: customers[0]?.id ?? '', planId: plans[0]?.id ?? '', quantity: 1, rail: 'card' });
+    createSubscriptionRef.current.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, reset]);
 
-  async function submit() {
-    if (!customerId || !planId) return;
-    setSaving(true);
-    setErr('');
+  const onSubmit = handleSubmit(async (values) => {
     try {
-      await api.subscriptions.create({ customer_id: customerId, plan_id: planId, quantity, preferred_rail: rail });
+      await createSubscription.mutateAsync({
+        customer_id: values.customerId,
+        plan_id: values.planId,
+        quantity: values.quantity,
+        preferred_rail: values.rail,
+      });
       onCreated();
-    } catch (e: any) {
-      setErr(e.message ?? 'Failed to create subscription');
-    } finally {
-      setSaving(false);
+    } catch {
+      // surfaced via createSubscription.isError/.error below
     }
-  }
+  });
 
   return (
     <Modal open={open} title="New subscription" onClose={onClose}>
-      <div className="space-y-4">
-        <Field label="Customer">
-          <Select value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
+      <form onSubmit={onSubmit} className="space-y-4">
+        <Field label="Customer" id="new-sub-customer">
+          <Select id="new-sub-customer" {...register('customerId')}>
             {customers.map((c) => <option key={c.id} value={c.id}>{c.name} — {c.email}</option>)}
           </Select>
         </Field>
-        <Field label="Plan">
-          <Select value={planId} onChange={(e) => setPlanId(e.target.value)}>
+        <Field label="Plan" id="new-sub-plan">
+          <Select id="new-sub-plan" {...register('planId')}>
             {plans.map((p) => <option key={p.id} value={p.id}>{p.name} — {formatKobo(Number(p.amount_minor))}/{p.interval}</option>)}
           </Select>
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Quantity">
-            <Input type="number" min={1} value={quantity} onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))} />
+          <Field label="Quantity" id="new-sub-quantity">
+            <Input id="new-sub-quantity" type="number" min={1} {...register('quantity')} />
           </Field>
-          <Field label="Payment rail">
-            <Select value={rail} onChange={(e) => setRail(e.target.value as any)}>
+          <Field label="Payment rail" id="new-sub-rail">
+            <Select id="new-sub-rail" {...register('rail')}>
               <option value="card">Card</option>
               <option value="transfer">Transfer</option>
               <option value="direct_debit">Direct debit</option>
             </Select>
           </Field>
         </div>
-        {err && <p className="text-xs text-danger">{err}</p>}
+        {createSubscription.isError && (
+          <p className="text-xs text-danger">
+            {createSubscription.error instanceof Error ? createSubscription.error.message : 'Failed to create subscription'}
+          </p>
+        )}
         <div className="flex justify-end gap-2 pt-1">
-          <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
-          <Button size="sm" onClick={submit} disabled={saving || !customerId || !planId}>
-            {saving ? 'Creating…' : 'Create subscription'}
+          <Button type="button" variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
+          <Button type="submit" size="sm" disabled={!isValid || createSubscription.isPending}>
+            {createSubscription.isPending ? 'Creating…' : 'Create subscription'}
           </Button>
         </div>
-      </div>
+      </form>
     </Modal>
   );
 }
 
 function SubscriptionActionsModal({
-  open, sub, customer, plan, onClose, onChanged, flash,
+  open, sub, customer, plan, onClose, flash,
 }: {
   open: boolean;
   sub: Subscription | null;
   customer?: Customer;
   plan?: Plan;
   onClose: () => void;
-  onChanged: () => void;
   flash: (m: string) => void;
 }) {
+  const checkoutLink = useCheckoutLink();
+  const simulatePayment = useSimulatePayment();
   const [checkout, setCheckout] = useState<{ checkoutLink: string; orderReference: string } | null>(null);
-  const [working, setWorking] = useState('');
   const [copied, setCopied] = useState(false);
   // Cache the last non-null subscription so the panel keeps its content while the
   // close animation plays (the parent nulls `sub` immediately on close).
@@ -369,7 +367,6 @@ function SubscriptionActionsModal({
     if (sub) {
       setCached({ sub, customer, plan });
       setCheckout(null);
-      setWorking('');
       setCopied(false);
     }
   }, [sub, customer, plan]);
@@ -379,32 +376,25 @@ function SubscriptionActionsModal({
 
   async function genLink() {
     if (!data) return;
-    setWorking('link');
     try {
-      const res = await api.subscriptions.checkoutLink(data.sub.id);
+      const res = await checkoutLink.mutateAsync(data.sub.id);
       setCheckout({ checkoutLink: res.checkoutLink, orderReference: res.orderReference });
-    } catch (e: any) {
-      flash(`Checkout link failed: ${e.message}`);
-    } finally {
-      setWorking('');
+    } catch (e) {
+      flash(`Checkout link failed: ${e instanceof Error ? e.message : 'unknown error'}`);
     }
   }
 
   async function simulate() {
     if (!data) return;
-    setWorking('sim');
     try {
       // orderReference convention: plinth_{tenantId}_{customerId}
       const tenantId = typeof window !== 'undefined' ? localStorage.getItem('nomba_tenant_id') ?? '' : '';
       const orderRef = checkout?.orderReference ?? `plinth_${tenantId}_${data.sub.customer_id}`;
-      await api.webhooks.simulatePayment(orderRef, amount);
+      await simulatePayment.mutateAsync({ orderReference: orderRef, amountMinor: amount });
       flash('Payment simulated — card is now on file. Run a billing tick to charge.');
       onClose();
-      onChanged();
-    } catch (e: any) {
-      flash(`Simulate failed: ${e.message}`);
-    } finally {
-      setWorking('');
+    } catch (e) {
+      flash(`Simulate failed: ${e instanceof Error ? e.message : 'unknown error'}`);
     }
   }
 
@@ -418,8 +408,8 @@ function SubscriptionActionsModal({
           </div>
 
           <div className="space-y-2">
-            <Button variant="outline" size="sm" className="w-full justify-start" onClick={genLink} disabled={working === 'link'}>
-              <CreditCard size={14} /> {working === 'link' ? 'Generating…' : 'Generate checkout link'}
+            <Button variant="outline" size="sm" className="w-full justify-start" onClick={genLink} disabled={checkoutLink.isPending}>
+              <CreditCard size={14} /> {checkoutLink.isPending ? 'Generating…' : 'Generate checkout link'}
             </Button>
 
             {checkout && (
@@ -434,8 +424,8 @@ function SubscriptionActionsModal({
               </div>
             )}
 
-            <Button variant="secondary" size="sm" className="w-full justify-start" onClick={simulate} disabled={working === 'sim'}>
-              <Play size={14} /> {working === 'sim' ? 'Simulating…' : 'Simulate payment (dev)'}
+            <Button variant="secondary" size="sm" className="w-full justify-start" onClick={simulate} disabled={simulatePayment.isPending}>
+              <Play size={14} /> {simulatePayment.isPending ? 'Simulating…' : 'Simulate payment (dev)'}
             </Button>
             <p className="text-xs text-faint">
               In fake-Nomba mode, "Simulate payment" tokenizes a test card onto this customer's subscriptions so billing ticks can charge.
@@ -451,10 +441,10 @@ function SubscriptionActionsModal({
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, id, children }: { label: string; id?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-body mb-1.5">{label}</label>
+      <label htmlFor={id} className="block text-xs font-medium text-body mb-1.5">{label}</label>
       {children}
     </div>
   );

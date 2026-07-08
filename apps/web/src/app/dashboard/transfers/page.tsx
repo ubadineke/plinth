@@ -1,6 +1,7 @@
 'use client';
-import { useState } from 'react';
-import useSWR from 'swr';
+import { Fragment, useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Topbar } from '@/components/layout/topbar';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,56 +9,53 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, Thead, Th, Tbody, Tr, Td } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { api } from '@/lib/api';
+import { useInvoices } from '@/lib/queries/invoices';
+import { useCustomers } from '@/lib/queries/customers';
+import { useSuspenseItems, useResolveSuspenseItem } from '@/lib/queries/suspense';
+import { resolveSuspenseSchema, type ResolveSuspenseFormValues } from '@/lib/schemas/suspense';
 import { formatKobo, formatDate } from '@/lib/utils';
 import { AlertTriangle, CheckCircle, ArrowDownLeft } from 'lucide-react';
 
-interface Invoice {
-  id: string;
-  customer_id: string;
-  subscription_id: string;
-  state: string;
-  amount_due: string;
-  amount_paid: string;
-  closed_at: string | null;
-  created_at: string;
-}
-
-interface SuspenseItem {
-  id: string;
-  tenant_id: string;
-  amount_minor: string;
-  account_ref: string;
-  narration: string;
-  reason: string;
-  created_at: string;
-}
-
-interface CustomerMap { [id: string]: string }
-
 export default function TransfersPage() {
   const [resolveId, setResolveId] = useState<string | null>(null);
-  const [resolveNote, setResolveNote] = useState('');
 
-  const { data: invData, isLoading: invLoading } = useSWR('invoices', () => api.invoices.list() as Promise<{ data: Invoice[] }>);
-  const { data: suspData, isLoading: suspLoading, mutate: mutateSusp } = useSWR('suspense-queue', () => api.suspense.list() as Promise<{ data: SuspenseItem[] }>);
-  const { data: custData } = useSWR('customers', () => api.customers.list() as Promise<{ data: { id: string; name: string }[] }>);
+  const invoicesQuery = useInvoices();
+  const suspenseQuery = useSuspenseItems();
+  const customersQuery = useCustomers();
+  const resolveSuspenseItem = useResolveSuspenseItem();
 
-  const invoices = (invData?.data ?? []).filter(i => i.state === 'paid');
-  const suspenseItems = suspData?.data ?? [];
-  const customerNames: CustomerMap = Object.fromEntries((custData?.data ?? []).map(c => [c.id, c.name]));
-  const loading = invLoading || suspLoading;
+  const invoices = (invoicesQuery.data?.data ?? []).filter((i) => i.state === 'paid');
+  const suspenseItems = suspenseQuery.data?.data ?? [];
+  const customerNames: Record<string, string> = {};
+  for (const c of customersQuery.data?.data ?? []) customerNames[c.id] = c.name;
+
+  // Original code waited for all three (best-effort via Promise.allSettled)
+  // before showing either table.
+  const loading = invoicesQuery.isPending || suspenseQuery.isPending || customersQuery.isPending;
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<ResolveSuspenseFormValues>({
+    resolver: zodResolver(resolveSuspenseSchema),
+    defaultValues: { note: '' },
+  });
+
+  useEffect(() => {
+    reset({ note: '' });
+  }, [resolveId, reset]);
 
   async function handleResolve(id: string) {
-    if (!resolveNote.trim()) return;
-    try {
-      await api.suspense.resolve(id, resolveNote);
-      await mutateSusp();
-      setResolveId(null);
-      setResolveNote('');
-    } catch {
-      alert('Failed to resolve — check console');
-    }
+    await handleSubmit(async (values) => {
+      try {
+        await resolveSuspenseItem.mutateAsync({ id, note: values.note });
+        setResolveId(null);
+      } catch {
+        // surfaced via resolveSuspenseItem.isError/.error below
+      }
+    })();
   }
 
   return (
@@ -215,8 +213,8 @@ export default function TransfersPage() {
               </Thead>
               <Tbody>
                 {suspenseItems.map((item) => (
-                  <>
-                    <Tr key={item.id}>
+                  <Fragment key={item.id}>
+                    <Tr>
                       <Td className="text-mid">{formatDate(item.created_at)}</Td>
                       <Td className="font-mono text-xs text-mid">{item.account_ref}</Td>
                       <Td className="text-right font-mono text-[13px] font-medium text-ink">{formatKobo(Number(item.amount_minor))}</Td>
@@ -237,17 +235,24 @@ export default function TransfersPage() {
                       </Td>
                     </Tr>
                     {resolveId === item.id && (
-                      <tr key={`${item.id}-form`}>
+                      <tr>
                         <td colSpan={6} className="px-4 pb-4 bg-soft">
-                          <div className="flex items-center gap-3 pt-3">
-                            <Input
-                              placeholder="Add resolution note…"
-                              value={resolveNote}
-                              onChange={(e) => setResolveNote(e.target.value)}
-                              className="flex-1"
-                            />
-                            <Button size="sm" onClick={() => handleResolve(item.id)}>
-                              Confirm
+                          <div className="flex items-start gap-3 pt-3">
+                            <div className="flex-1">
+                              <Input
+                                placeholder="Add resolution note…"
+                                {...register('note')}
+                                className="w-full"
+                              />
+                              {errors.note && <p className="text-xs text-danger mt-1">{errors.note.message}</p>}
+                              {resolveSuspenseItem.isError && (
+                                <p className="text-xs text-danger mt-1">
+                                  {resolveSuspenseItem.error instanceof Error ? resolveSuspenseItem.error.message : 'Failed to resolve'}
+                                </p>
+                              )}
+                            </div>
+                            <Button size="sm" disabled={resolveSuspenseItem.isPending} onClick={() => handleResolve(item.id)}>
+                              {resolveSuspenseItem.isPending ? 'Confirming…' : 'Confirm'}
                             </Button>
                             <Button variant="ghost" size="sm" onClick={() => setResolveId(null)}>
                               Cancel
@@ -256,7 +261,7 @@ export default function TransfersPage() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 ))}
               </Tbody>
             </Table>

@@ -1,80 +1,53 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { ThemeToggle } from '@/components/layout/theme-toggle';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import Image from 'next/image';
 import { CheckCircle, ArrowLeft, Clock, Mail, FileText } from 'lucide-react';
-import { api } from '@/lib/api';
+import { useSubmitApplication } from '@/lib/queries/auth';
+import { signupSchema, type SignupFormValues } from '@/lib/schemas/auth';
 
 type Step = 'form' | 'submitted';
 
-interface FormData {
-  businessName: string;
-  contactName: string;
-  email: string;
-  rcNumber: string;
-  website: string;
-  description: string;
-}
-
-const EMPTY: FormData = {
-  businessName: '',
-  contactName: '',
-  email: '',
-  rcNumber: '',
-  website: '',
-  description: '',
-};
-
 export default function SignupPage() {
   const [step, setStep] = useState<Step>('form');
-  const [form, setForm] = useState<FormData>(EMPTY);
-  const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<Partial<FormData>>({});
+  const [submitted, setSubmitted] = useState<{ businessName: string; email: string } | null>(null);
+  const submitApplication = useSubmitApplication();
 
-  function set(field: keyof FormData) {
-    return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      setForm((f) => ({ ...f, [field]: e.target.value }));
-      setErrors((e_) => ({ ...e_, [field]: '' }));
-    };
-  }
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<SignupFormValues>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: {
+      businessName: '', contactName: '', email: '', rcNumber: '', website: '', description: '',
+    },
+  });
 
-  function validate(): boolean {
-    const errs: Partial<FormData> = {};
-    if (!form.businessName.trim()) errs.businessName = 'Required';
-    if (!form.contactName.trim()) errs.contactName = 'Required';
-    if (!form.email.trim() || !form.email.includes('@')) errs.email = 'Valid email required';
-    if (!form.description.trim() || form.description.trim().length < 20)
-      errs.description = 'Tell us a bit more (at least 20 characters)';
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
-  }
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!validate()) return;
-    setLoading(true);
+  const onSubmit = handleSubmit(async (values) => {
     try {
-      await api.applications.submit({
-        businessName: form.businessName,
-        contactName:  form.contactName,
-        email:        form.email,
-        rcNumber:     form.rcNumber || undefined,
-        website:      form.website || undefined,
-        description:  form.description,
+      await submitApplication.mutateAsync({
+        businessName: values.businessName,
+        contactName:  values.contactName,
+        email:        values.email,
+        rcNumber:     values.rcNumber || undefined,
+        website:      values.website || undefined,
+        description:  values.description,
       });
+      setSubmitted({ businessName: values.businessName, email: values.email });
       setStep('submitted');
     } catch {
-      setErrors({ email: 'Something went wrong. Please try again.' });
-    } finally {
-      setLoading(false);
+      // surfaced via submitApplication.isError/.error below
     }
-  }
+  });
 
-  if (step === 'submitted') {
+  if (step === 'submitted' && submitted) {
     return (
       <div className="min-h-screen bg-canvas flex items-center justify-center p-6">
         <div className="w-full max-w-md text-center space-y-6">
@@ -84,8 +57,8 @@ export default function SignupPage() {
           <div>
             <h1 className="text-2xl font-bold text-ink">Application received</h1>
             <p className="mt-2 text-sm text-mid">
-              We'll review <strong>{form.businessName}</strong>'s application and get back to you at{' '}
-              <strong>{form.email}</strong> within 1–2 business days.
+              We'll review <strong>{submitted.businessName}</strong>'s application and get back to you at{' '}
+              <strong>{submitted.email}</strong> within 1–2 business days.
             </p>
           </div>
           <Card>
@@ -169,93 +142,98 @@ export default function SignupPage() {
         {/* Form */}
         <Card>
           <CardContent className="pt-6">
-            <form onSubmit={submit} className="space-y-5">
+            <form onSubmit={onSubmit} className="space-y-5">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-body mb-1.5">
+                  <label htmlFor="signup-business-name" className="block text-xs font-medium text-body mb-1.5">
                     Business name <span className="text-danger">*</span>
                   </label>
                   <Input
+                    id="signup-business-name"
                     placeholder="Acme Technologies Ltd"
-                    value={form.businessName}
-                    onChange={set('businessName')}
+                    {...register('businessName')}
                     className={errors.businessName ? 'border-danger/40 focus:ring-danger/30' : ''}
                   />
-                  {errors.businessName && <p className="text-xs text-danger mt-1">{errors.businessName}</p>}
+                  {errors.businessName && <p className="text-xs text-danger mt-1">{errors.businessName.message}</p>}
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-body mb-1.5">
+                  <label htmlFor="signup-contact-name" className="block text-xs font-medium text-body mb-1.5">
                     Your name <span className="text-danger">*</span>
                   </label>
                   <Input
+                    id="signup-contact-name"
                     placeholder="Tunde Ogunyemi"
-                    value={form.contactName}
-                    onChange={set('contactName')}
+                    {...register('contactName')}
                     className={errors.contactName ? 'border-danger/40 focus:ring-danger/30' : ''}
                   />
-                  {errors.contactName && <p className="text-xs text-danger mt-1">{errors.contactName}</p>}
+                  {errors.contactName && <p className="text-xs text-danger mt-1">{errors.contactName.message}</p>}
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-body mb-1.5">
+                <label htmlFor="signup-email" className="block text-xs font-medium text-body mb-1.5">
                   Business email <span className="text-danger">*</span>
                 </label>
                 <Input
+                  id="signup-email"
                   type="email"
                   placeholder="billing@acme.ng"
-                  value={form.email}
-                  onChange={set('email')}
+                  {...register('email')}
                   className={errors.email ? 'border-danger/40 focus:ring-danger/30' : ''}
                 />
-                {errors.email && <p className="text-xs text-danger mt-1">{errors.email}</p>}
+                {errors.email && <p className="text-xs text-danger mt-1">{errors.email.message}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-body mb-1.5">
+                  <label htmlFor="signup-rc-number" className="block text-xs font-medium text-body mb-1.5">
                     RC number <span className="text-faint font-normal">(optional)</span>
                   </label>
                   <Input
+                    id="signup-rc-number"
                     placeholder="RC-1234567"
-                    value={form.rcNumber}
-                    onChange={set('rcNumber')}
+                    {...register('rcNumber')}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-body mb-1.5">
+                  <label htmlFor="signup-website" className="block text-xs font-medium text-body mb-1.5">
                     Website <span className="text-faint font-normal">(optional)</span>
                   </label>
                   <Input
+                    id="signup-website"
                     placeholder="https://acme.ng"
-                    value={form.website}
-                    onChange={set('website')}
+                    {...register('website')}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-body mb-1.5">
+                <label htmlFor="signup-description" className="block text-xs font-medium text-body mb-1.5">
                   What are you building? <span className="text-danger">*</span>
                 </label>
                 <textarea
+                  id="signup-description"
                   rows={4}
                   placeholder="Describe your product and how you plan to use subscription billing. E.g. 'We're building an HR SaaS for SMEs and need monthly billing for our Pro and Enterprise plans.'"
-                  value={form.description}
-                  onChange={set('description')}
+                  {...register('description')}
                   className={[
                     'w-full rounded-lg border px-3 py-2 text-sm placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-jade/25 resize-none',
                     'bg-card text-ink border-line',
-                    
                     errors.description ? 'border-danger/40 focus:ring-danger/30' : '',
                   ].join(' ')}
                 />
-                {errors.description && <p className="text-xs text-danger mt-1">{errors.description}</p>}
+                {errors.description && <p className="text-xs text-danger mt-1">{errors.description.message}</p>}
               </div>
 
+              {submitApplication.isError && (
+                <p className="text-xs text-danger">
+                  {submitApplication.error instanceof Error ? submitApplication.error.message : 'Something went wrong. Please try again.'}
+                </p>
+              )}
+
               <div className="pt-1">
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Submitting…' : 'Submit application →'}
+                <Button type="submit" className="w-full" disabled={submitApplication.isPending}>
+                  {submitApplication.isPending ? 'Submitting…' : 'Submit application →'}
                 </Button>
                 <p className="text-xs text-center text-faint mt-3">
                   By submitting, you agree to Plinth's{' '}

@@ -10,7 +10,8 @@ import {
   FileText, ArrowLeftRight, Package, Activity, Settings,
   Webhook, Bell, LogOut, ChevronUp,
 } from 'lucide-react';
-import { api, logout } from '@/lib/api';
+import { logout } from '@/lib/api';
+import { useMe } from '@/lib/queries/me';
 
 /** Grouped by how an ops person thinks: money first, people, then plumbing. */
 const NAV_GROUPS: { label?: string; items: { href: string; icon: any; label: string }[] }[] = [
@@ -49,13 +50,9 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const reduce = useReducedMotion();
-  const [tenant, setTenant] = useState<{ id: string; name: string } | null>(null);
+  const { data: tenant } = useMe();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    api.me.get().then((t) => setTenant({ id: t.id, name: t.name })).catch(() => {});
-  }, []);
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -102,6 +99,7 @@ export function Sidebar() {
                   <Link
                     key={href}
                     href={href}
+                    data-tour={`nav-item-${label.toLowerCase()}`}
                     className={cn(
                       'group relative flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[13.5px] transition-colors duration-150',
                       active ? 'font-medium text-ink' : 'text-mid hover:bg-soft/70 hover:text-ink',
@@ -156,6 +154,7 @@ export function Sidebar() {
 
           <Link
             href="/dashboard/settings"
+            data-tour="nav-item-settings"
             className={cn(
               'group relative mb-1 flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[13.5px] transition-colors duration-150',
               isActive('/dashboard/settings') ? 'font-medium text-ink' : 'text-mid hover:bg-soft/70 hover:text-ink',

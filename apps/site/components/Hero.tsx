@@ -2,7 +2,10 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import gsap from "gsap";
+import { BridgeSceneBoundary, BridgeFallback } from "./BridgeSceneBoundary";
+import { isWebglAvailable } from "@/lib/webgl";
 
 const BridgeScene = dynamic(() => import("./BridgeScene"), { ssr: false });
 
@@ -45,9 +48,11 @@ function PlayGlyph({ className = "" }: { className?: string }) {
 export default function Hero() {
   const root = useRef<HTMLElement>(null);
   const [reduce, setReduce] = useState(false);
+  const [webglOk, setWebglOk] = useState(true);
 
   useEffect(() => {
     setReduce(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    setWebglOk(isWebglAvailable());
   }, []);
 
   useLayoutEffect(() => {
@@ -80,16 +85,30 @@ export default function Hero() {
         }}
       />
 
-      {/* live 3D bridge + danfo + the PLINTH backdrop word behind the pylon */}
+      {/* live 3D bridge + danfo + the PLINTH backdrop word behind the pylon —
+          falls back to a static photo if WebGL is unavailable or the scene
+          throws (unsupported GPU, driver crash, lost context). */}
       <div className="absolute inset-0 z-0">
-        <BridgeScene reduce={reduce} />
+        {webglOk ? (
+          <BridgeSceneBoundary>
+            <BridgeScene reduce={reduce} />
+          </BridgeSceneBoundary>
+        ) : (
+          <BridgeFallback />
+        )}
       </div>
 
       {/* ── nav ── plain links, no capsule; wordmark in the poster face ── */}
       <header className="relative z-20 mx-auto flex max-w-6xl items-center justify-between px-5 pt-6">
         <a href="#" className="flex items-center gap-2.5">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/plinth-logo.png" alt="Plinth" className="h-9 w-9 object-contain" />
+          <Image
+            src="/plinth-logo.png"
+            alt="Plinth"
+            width={36}
+            height={36}
+            priority
+            className="h-9 w-9 object-contain"
+          />
           <span className="font-display text-2xl font-bold leading-none tracking-tight text-ink">
             Plinth
           </span>

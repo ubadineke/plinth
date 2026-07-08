@@ -1,37 +1,26 @@
 'use client';
-import { useState, useEffect } from 'react';
-import useSWR from 'swr';
+import { useEffect, useRef, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Topbar } from '@/components/layout/topbar';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { Tooltip } from '@/components/ui/tooltip';
-import { api } from '@/lib/api';
-import { formatKobo } from '@/lib/utils';
-import { cn } from '@/lib/utils';
+import { formatKobo, cn } from '@/lib/utils';
 import { Plus, CheckCircle, Layers, FolderPlus, HelpCircle, Trash2, Archive } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { Skeleton } from '@/components/ui/skeleton';
-
-interface PlanGroup {
-  id: string;
-  name: string;
-  description: string | null;
-  created_at: string;
-}
-
-interface Plan {
-  id: string;
-  plan_group_id: string;
-  name: string;
-  amount_minor: string;
-  interval: string;
-  interval_count: number;
-  trial_period_days: number;
-  lookup_key?: string | null;
-  created_at: string;
-}
+import { usePolicy, useApplyPolicyPreset, type Policy } from '@/lib/queries/policy';
+import { usePlanGroups, useCreatePlanGroup, type PlanGroup } from '@/lib/queries/plan-groups';
+import { usePlans, useCreatePlan, useUpdatePlan, useDeletePlan, type Plan } from '@/lib/queries/plans';
+import {
+  planGroupSchema, type PlanGroupFormValues,
+  planSchema, type PlanFormInput, type PlanFormValues,
+  editPlanSchema, type EditPlanFormInput, type EditPlanFormValues,
+} from '@/lib/schemas/catalog';
 
 type BillingInterval = 'day' | 'week' | 'month' | 'year';
 
@@ -99,7 +88,7 @@ const PRESET_SIGNATURE: Record<string, { activation_strategy: string; billing_mo
   postpaid:       { activation_strategy: 'activate_then_charge', billing_mode: 'arrears', grace_days: 7,  change_during_dunning: 'gate_upgrades', cancel_policy: 'end_of_period' },
 };
 
-function detectPreset(policy: any): string | null {
+function detectPreset(policy: Policy | undefined): string | null {
   if (!policy) return null;
   for (const [id, sig] of Object.entries(PRESET_SIGNATURE)) {
     if (
@@ -114,31 +103,29 @@ function detectPreset(policy: any): string | null {
 }
 
 export default function CatalogPage() {
-  const [activePreset, setActivePreset] = useState<string | null>(null);
   const [pendingPreset, setPendingPreset] = useState<string | null>(null);
-  const [policy, setPolicy] = useState<any>(null);
-  const [applyingPreset, setApplyingPreset] = useState(false);
 
-  useEffect(() => {
-    api.policy.get()
-      .then((p: any) => { setPolicy(p); setActivePreset(detectPreset(p)); })
-      .catch(() => {});
-  }, []);
+  const policyQuery = usePolicy();
+  const groupsQuery = usePlanGroups();
+  const plansQuery = usePlans();
+  const applyPolicyPreset = useApplyPolicyPreset();
+  const deletePlanMutation = useDeletePlan();
 
-  // Catalog — shared SWR keys ('plans' is shared with subscriptions page)
-  const { data: groupsData, isLoading: groupsLoading, mutate: mutateGroups } = useSWR('plan-groups', () => api.planGroups.list() as Promise<{ data: PlanGroup[] }>);
-  const { data: plansData, isLoading: plansLoading, mutate: mutatePlans } = useSWR('plans', () => api.plans.list() as Promise<{ data: Plan[] }>);
-  const groups: PlanGroup[] = groupsData?.data ?? [];
-  const plans: Plan[] = plansData?.data ?? [];
-  const loading = groupsLoading || plansLoading;
-  const [error, setError] = useState<string | null>(null);
+  const policy = policyQuery.data;
+  const activePreset = detectPreset(policy);
+  const groups = groupsQuery.data?.data ?? [];
+  const plans = plansQuery.data?.data ?? [];
+
+  const loading = groupsQuery.isPending || plansQuery.isPending;
+  const error = groupsQuery.error instanceof Error ? groupsQuery.error.message
+    : plansQuery.error instanceof Error ? plansQuery.error.message
+    : null;
 
   // Modal state
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
   const [deletePlan, setDeletePlan] = useState<Plan | null>(null);
-  const [deleting, setDeleting] = useState(false);
   const [deleteErr, setDeleteErr] = useState<string | null>(null);
   // Kept around during the close animation so the panel doesn't blank out mid-exit.
   const [cachedDeletePlan, setCachedDeletePlan] = useState<Plan | null>(null);
@@ -148,22 +135,13 @@ export default function CatalogPage() {
 
   async function confirmDelete() {
     if (!deletePlan) return;
-    setDeleting(true);
     setDeleteErr(null);
     try {
-      await api.plans.remove(deletePlan.id);
+      await deletePlanMutation.mutateAsync(deletePlan.id);
       setDeletePlan(null);
-      mutatePlans();
     } catch (e) {
       setDeleteErr(e instanceof Error ? e.message : 'Failed to delete plan');
-    } finally {
-      setDeleting(false);
     }
-  }
-
-  function loadCatalog() {
-    mutateGroups();
-    mutatePlans();
   }
 
   async function applyPreset(id: string) {
@@ -171,16 +149,11 @@ export default function CatalogPage() {
       setPendingPreset(id);
       return;
     }
-    setApplyingPreset(true);
     try {
-      const updated = await api.policy.applyPreset(id);
-      setPolicy(updated);
-      setActivePreset(id);
+      await applyPolicyPreset.mutateAsync(id);
       setPendingPreset(null);
     } catch {
       // leave pending so the user can retry / cancel
-    } finally {
-      setApplyingPreset(false);
     }
   }
 
@@ -242,7 +215,6 @@ export default function CatalogPage() {
             {!loading && error && (
               <Card className="p-5">
                 <p className="text-sm text-danger mb-3">{error}</p>
-                <Button variant="outline" size="sm" onClick={loadCatalog}>Retry</Button>
               </Card>
             )}
 
@@ -394,8 +366,8 @@ export default function CatalogPage() {
                             <p className="text-xs text-warn flex-1">
                               This will update your billing policy. Continue?
                             </p>
-                            <Button size="sm" disabled={applyingPreset} onClick={() => applyPreset(preset.id)}>{applyingPreset ? 'Applying…' : 'Confirm'}</Button>
-                            <Button variant="ghost" size="sm" disabled={applyingPreset} onClick={() => setPendingPreset(null)}>Cancel</Button>
+                            <Button size="sm" disabled={applyPolicyPreset.isPending} onClick={() => applyPreset(preset.id)}>{applyPolicyPreset.isPending ? 'Applying…' : 'Confirm'}</Button>
+                            <Button variant="ghost" size="sm" disabled={applyPolicyPreset.isPending} onClick={() => setPendingPreset(null)}>Cancel</Button>
                           </div>
                         ) : (
                           <Button variant="secondary" size="sm" onClick={() => applyPreset(preset.id)}>
@@ -415,30 +387,18 @@ export default function CatalogPage() {
       <AddPlanGroupModal
         open={showGroupModal}
         onClose={() => setShowGroupModal(false)}
-        onCreated={() => {
-          setShowGroupModal(false);
-          loadCatalog(); // soft refresh — pull the full record back
-        }}
       />
 
       <AddPlanModal
         open={showPlanModal}
         groups={groups}
         onClose={() => setShowPlanModal(false)}
-        onCreated={() => {
-          setShowPlanModal(false);
-          loadCatalog(); // soft refresh — the create response lacks group/interval fields
-        }}
       />
 
       <EditPlanModal
         open={!!editingPlan}
         plan={editingPlan}
         onClose={() => setEditingPlan(null)}
-        onSaved={() => {
-          mutatePlans();
-          setEditingPlan(null);
-        }}
       />
 
       <Modal
@@ -459,8 +419,8 @@ export default function CatalogPage() {
           {deleteErr && <p className="text-xs text-danger">{deleteErr}</p>}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" size="sm" onClick={() => setDeletePlan(null)}>Cancel</Button>
-            <Button type="button" variant="destructive" size="sm" disabled={deleting} onClick={confirmDelete}>
-              {deleting ? 'Working…' : 'Delete / Archive'}
+            <Button type="button" variant="destructive" size="sm" disabled={deletePlanMutation.isPending} onClick={confirmDelete}>
+              {deletePlanMutation.isPending ? 'Working…' : 'Delete / Archive'}
             </Button>
           </div>
         </div>
@@ -469,9 +429,9 @@ export default function CatalogPage() {
   );
 }
 
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+function Field({ label, hint, id, children }: { label: string; hint?: string; id?: string; children: React.ReactNode }) {
   return (
-    <label className="block">
+    <label htmlFor={id} className="block">
       <span className="flex items-center gap-1 mb-1">
         <span className="text-xs font-medium text-body">{label}</span>
         {hint && (
@@ -485,43 +445,40 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   );
 }
 
-function AddPlanGroupModal({
-  open,
-  onClose,
-  onCreated,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onCreated: (group: PlanGroup) => void;
-}) {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+function AddPlanGroupModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const createPlanGroup = useCreatePlanGroup();
+  const createPlanGroupRef = useRef(createPlanGroup);
+  createPlanGroupRef.current = createPlanGroup;
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { isValid },
+  } = useForm<PlanGroupFormValues>({
+    resolver: zodResolver(planGroupSchema),
+    mode: 'onChange',
+    defaultValues: { name: '', description: '' },
+  });
 
   useEffect(() => {
     if (!open) return;
-    setName('');
-    setDescription('');
-    setErr(null);
-  }, [open]);
+    reset({ name: '', description: '' });
+    createPlanGroupRef.current.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, reset]);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim()) return;
-    setSubmitting(true);
-    setErr(null);
+  const onSubmit = handleSubmit(async (values) => {
     try {
-      const created = (await api.planGroups.create({
-        name: name.trim(),
-        ...(description.trim() ? { description: description.trim() } : {}),
-      })) as PlanGroup;
-      onCreated(created);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Failed to create plan group');
-      setSubmitting(false);
+      await createPlanGroup.mutateAsync({
+        name: values.name,
+        ...(values.description ? { description: values.description } : {}),
+      });
+      onClose();
+    } catch {
+      // surfaced via createPlanGroup.isError/.error below
     }
-  }
+  });
 
   return (
     <Modal
@@ -531,28 +488,22 @@ function AddPlanGroupModal({
       icon={<FolderPlus size={20} className="text-jade-deep" />}
       onClose={onClose}
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <Field label="Name">
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Pro Tiers"
-            autoFocus
-            required
-          />
+      <form onSubmit={onSubmit} className="space-y-4">
+        <Field label="Name" id="new-group-name">
+          <Input id="new-group-name" {...register('name')} placeholder="e.g. Pro Tiers" autoFocus />
         </Field>
-        <Field label="Description (optional)">
-          <Input
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="What is this group for?"
-          />
+        <Field label="Description (optional)" id="new-group-description">
+          <Input id="new-group-description" {...register('description')} placeholder="What is this group for?" />
         </Field>
-        {err && <p className="text-xs text-danger">{err}</p>}
+        {createPlanGroup.isError && (
+          <p className="text-xs text-danger">
+            {createPlanGroup.error instanceof Error ? createPlanGroup.error.message : 'Failed to create plan group'}
+          </p>
+        )}
         <div className="flex justify-end gap-2 pt-1">
           <Button type="button" variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
-          <Button type="submit" size="sm" disabled={submitting || !name.trim()}>
-            {submitting ? 'Creating…' : 'Create group'}
+          <Button type="submit" size="sm" disabled={!isValid || createPlanGroup.isPending}>
+            {createPlanGroup.isPending ? 'Creating…' : 'Create group'}
           </Button>
         </div>
       </form>
@@ -561,63 +512,52 @@ function AddPlanGroupModal({
 }
 
 function AddPlanModal({
-  open,
-  groups,
-  onClose,
-  onCreated,
+  open, groups, onClose,
 }: {
   open: boolean;
   groups: PlanGroup[];
   onClose: () => void;
-  onCreated: (plan: Plan) => void;
 }) {
-  const [planGroupId, setPlanGroupId] = useState(groups[0]?.id ?? '');
-  const [name, setName] = useState('');
-  const [amountNaira, setAmountNaira] = useState('');
-  const [interval, setInterval] = useState<BillingInterval>('month');
-  const [intervalCount, setIntervalCount] = useState('1');
-  const [trialDays, setTrialDays] = useState('0');
-  const [lookupKey, setLookupKey] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  const createPlan = useCreatePlan();
+  const createPlanRef = useRef(createPlan);
+  createPlanRef.current = createPlan;
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { isValid, errors },
+  } = useForm<PlanFormInput, any, PlanFormValues>({
+    resolver: zodResolver(planSchema),
+    mode: 'onChange',
+    defaultValues: { planGroupId: '', name: '', amountNaira: '', interval: 'month', intervalCount: 1, trialDays: 0, lookupKey: '' },
+  });
 
   useEffect(() => {
     if (!open) return;
-    setPlanGroupId(groups[0]?.id ?? '');
-    setName('');
-    setAmountNaira('');
-    setInterval('month');
-    setIntervalCount('1');
-    setTrialDays('0');
-    setLookupKey('');
-    setErr(null);
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+    reset({ planGroupId: groups[0]?.id ?? '', name: '', amountNaira: '', interval: 'month', intervalCount: 1, trialDays: 0, lookupKey: '' });
+    createPlanRef.current.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, groups, reset]);
 
-  const selectClass =
-    'w-full h-9 rounded-lg border border-line bg-card px-3 text-[13.5px] text-ink focus:outline-none focus:border-jade focus:ring-2 focus:ring-jade/25';
+  const lookupKeyField = register('lookupKey');
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const amount = Number(amountNaira);
-    if (!planGroupId || !name.trim() || !(amount > 0)) return;
-    setSubmitting(true);
-    setErr(null);
+  const onSubmit = handleSubmit(async (values) => {
     try {
-      const created = (await api.plans.create({
-        plan_group_id: planGroupId,
-        name: name.trim(),
-        amount_minor: Math.round(amount * 100),
-        billing_interval: interval,
-        billing_interval_count: Number(intervalCount) || 1,
-        trial_period_days: Number(trialDays) || 0,
-        lookup_key: lookupKey.trim(),
-      })) as Plan;
-      onCreated(created);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Failed to create plan');
-      setSubmitting(false);
+      await createPlan.mutateAsync({
+        plan_group_id: values.planGroupId,
+        name: values.name,
+        amount_minor: Math.round(values.amountNaira * 100),
+        billing_interval: values.interval,
+        billing_interval_count: values.intervalCount,
+        trial_period_days: values.trialDays,
+        lookup_key: values.lookupKey,
+      });
+      onClose();
+    } catch {
+      // surfaced via createPlan.isError/.error below
     }
-  }
+  });
 
   return (
     <Modal
@@ -627,88 +567,57 @@ function AddPlanModal({
       icon={<Plus size={20} className="text-jade-deep" />}
       onClose={onClose}
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <Field label="Plan group">
-          <select
-            value={planGroupId}
-            onChange={(e) => setPlanGroupId(e.target.value)}
-            className={selectClass}
-            required
-          >
+      <form onSubmit={onSubmit} className="space-y-4">
+        <Field label="Plan group" id="new-plan-group">
+          <Select id="new-plan-group" {...register('planGroupId')}>
             {groups.map((g) => (
               <option key={g.id} value={g.id}>{g.name}</option>
             ))}
-          </select>
+          </Select>
         </Field>
-        <Field label="Name">
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Pro Monthly"
-            autoFocus
-            required
-          />
+        <Field label="Name" id="new-plan-name">
+          <Input id="new-plan-name" {...register('name')} placeholder="e.g. Pro Monthly" autoFocus />
         </Field>
-        <Field label="Amount (₦)" hint="What each customer is charged every billing cycle, in naira. Stored internally in kobo.">
-          <Input
-            type="number"
-            min="0"
-            step="0.01"
-            value={amountNaira}
-            onChange={(e) => setAmountNaira(e.target.value)}
-            placeholder="5000"
-            required
-          />
+        <Field label="Amount (₦)" hint="What each customer is charged every billing cycle, in naira. Stored internally in kobo." id="new-plan-amount">
+          <Input id="new-plan-amount" type="number" min="0" step="0.01" {...register('amountNaira')} placeholder="5000" />
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Billing interval" hint="How often the customer is charged — daily, weekly, monthly, or yearly.">
-            <select
-              value={interval}
-              onChange={(e) => setInterval(e.target.value as BillingInterval)}
-              className={selectClass}
-            >
+          <Field label="Billing interval" hint="How often the customer is charged — daily, weekly, monthly, or yearly." id="new-plan-interval">
+            <Select id="new-plan-interval" {...register('interval')}>
               <option value="day">Day</option>
               <option value="week">Week</option>
               <option value="month">Month</option>
               <option value="year">Year</option>
-            </select>
+            </Select>
           </Field>
-          <Field label="Interval count" hint="Multiplies the interval. e.g. interval Month × count 3 = billed once every 3 months. Leave at 1 for a standard cycle.">
-            <Input
-              type="number"
-              min="1"
-              step="1"
-              value={intervalCount}
-              onChange={(e) => setIntervalCount(e.target.value)}
-            />
+          <Field label="Interval count" hint="Multiplies the interval. e.g. interval Month × count 3 = billed once every 3 months. Leave at 1 for a standard cycle." id="new-plan-interval-count">
+            <Input id="new-plan-interval-count" type="number" min="1" step="1" {...register('intervalCount')} />
           </Field>
         </div>
-        <Field label="Trial period (days)" hint="Free days before the first charge. The subscription stays in 'trialing' until it converts. 0 = charge immediately.">
-          <Input
-            type="number"
-            min="0"
-            step="1"
-            value={trialDays}
-            onChange={(e) => setTrialDays(e.target.value)}
-          />
+        <Field label="Trial period (days)" hint="Free days before the first charge. The subscription stays in 'trialing' until it converts. 0 = charge immediately." id="new-plan-trial-days">
+          <Input id="new-plan-trial-days" type="number" min="0" step="1" {...register('trialDays')} />
         </Field>
-        <Field label="Lookup key" hint="A stable handle (e.g. standard_monthly) your app references instead of the plan's UUID. Lowercase letters, numbers and underscores. Unique per catalog.">
+        <Field label="Lookup key" hint="A stable handle (e.g. standard_monthly) your app references instead of the plan's UUID. Lowercase letters, numbers and underscores. Unique per catalog." id="new-plan-lookup-key">
           <Input
-            value={lookupKey}
-            onChange={(e) => setLookupKey(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_'))}
+            id="new-plan-lookup-key"
+            {...lookupKeyField}
+            onChange={(e) => {
+              e.target.value = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+              lookupKeyField.onChange(e);
+            }}
             placeholder="e.g. standard_monthly"
-            required
           />
+          {errors.lookupKey && <p className="text-xs text-danger mt-1">{errors.lookupKey.message}</p>}
         </Field>
-        {err && <p className="text-xs text-danger">{err}</p>}
+        {createPlan.isError && (
+          <p className="text-xs text-danger">
+            {createPlan.error instanceof Error ? createPlan.error.message : 'Failed to create plan'}
+          </p>
+        )}
         <div className="flex justify-end gap-2 pt-1">
           <Button type="button" variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
-          <Button
-            type="submit"
-            size="sm"
-            disabled={submitting || !planGroupId || !name.trim() || !(Number(amountNaira) > 0) || !lookupKey.trim()}
-          >
-            {submitting ? 'Creating…' : 'Create plan'}
+          <Button type="submit" size="sm" disabled={!isValid || createPlan.isPending}>
+            {createPlan.isPending ? 'Creating…' : 'Create plan'}
           </Button>
         </div>
       </form>
@@ -717,60 +626,56 @@ function AddPlanModal({
 }
 
 function EditPlanModal({
-  open,
-  plan,
-  onClose,
-  onSaved,
+  open, plan, onClose,
 }: {
   open: boolean;
   plan: Plan | null;
   onClose: () => void;
-  onSaved: (plan: Plan) => void;
 }) {
+  const updatePlan = useUpdatePlan();
   const [cached, setCached] = useState<Plan | null>(null);
-  const [name, setName] = useState('');
-  const [amountNaira, setAmountNaira] = useState('');
-  const [interval, setInterval] = useState<BillingInterval>('month');
-  const [intervalCount, setIntervalCount] = useState('1');
-  const [trialDays, setTrialDays] = useState('0');
-  const [submitting, setSubmitting] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { isValid },
+  } = useForm<EditPlanFormInput, any, EditPlanFormValues>({
+    resolver: zodResolver(editPlanSchema),
+    mode: 'onChange',
+    defaultValues: { name: '', amountNaira: '', interval: 'month', intervalCount: 1, trialDays: 0 },
+  });
 
   useEffect(() => {
     if (!plan) return;
     setCached(plan);
-    setName(plan.name);
-    setAmountNaira(String(Number(plan.amount_minor) / 100));
-    setInterval(plan.interval as BillingInterval);
-    setIntervalCount(String(plan.interval_count));
-    setTrialDays(String(plan.trial_period_days));
-    setErr(null);
-  }, [plan]);
+    reset({
+      name: plan.name,
+      amountNaira: Number(plan.amount_minor) / 100,
+      interval: plan.interval as BillingInterval,
+      intervalCount: plan.interval_count,
+      trialDays: plan.trial_period_days,
+    });
+  }, [plan, reset]);
 
-  const selectClass =
-    'w-full h-9 rounded-lg border border-line bg-card px-3 text-[13.5px] text-ink focus:outline-none focus:border-jade focus:ring-2 focus:ring-jade/25';
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  const onSubmit = handleSubmit(async (values) => {
     if (!cached) return;
-    const amount = Number(amountNaira);
-    if (!name.trim() || !(amount > 0)) return;
-    setSubmitting(true);
-    setErr(null);
     try {
-      const updated = (await api.plans.update(cached.id, {
-        name: name.trim(),
-        amount_minor: Math.round(amount * 100),
-        billing_interval: interval,
-        billing_interval_count: Number(intervalCount) || 1,
-        trial_period_days: Number(trialDays) || 0,
-      })) as Plan;
-      onSaved(updated);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Failed to update plan');
-      setSubmitting(false);
+      await updatePlan.mutateAsync({
+        id: cached.id,
+        data: {
+          name: values.name,
+          amount_minor: Math.round(values.amountNaira * 100),
+          billing_interval: values.interval,
+          billing_interval_count: values.intervalCount,
+          trial_period_days: values.trialDays,
+        },
+      });
+      onClose();
+    } catch {
+      // surfaced via updatePlan.isError/.error below
     }
-  }
+  });
 
   return (
     <Modal
@@ -781,41 +686,38 @@ function EditPlanModal({
       onClose={onClose}
     >
       {cached && (
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Field label="Name">
-            <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus required />
+        <form onSubmit={onSubmit} className="space-y-4">
+          <Field label="Name" id="edit-plan-name">
+            <Input id="edit-plan-name" {...register('name')} autoFocus />
           </Field>
-          <Field label="Amount (₦)" hint="What each customer is charged every billing cycle, in naira. Stored internally in kobo.">
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              value={amountNaira}
-              onChange={(e) => setAmountNaira(e.target.value)}
-              required
-            />
+          <Field label="Amount (₦)" hint="What each customer is charged every billing cycle, in naira. Stored internally in kobo." id="edit-plan-amount">
+            <Input id="edit-plan-amount" type="number" min="0" step="0.01" {...register('amountNaira')} />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Billing interval" hint="How often the customer is charged — daily, weekly, monthly, or yearly.">
-              <select value={interval} onChange={(e) => setInterval(e.target.value as BillingInterval)} className={selectClass}>
+            <Field label="Billing interval" hint="How often the customer is charged — daily, weekly, monthly, or yearly." id="edit-plan-interval">
+              <Select id="edit-plan-interval" {...register('interval')}>
                 <option value="day">Day</option>
                 <option value="week">Week</option>
                 <option value="month">Month</option>
                 <option value="year">Year</option>
-              </select>
+              </Select>
             </Field>
-            <Field label="Interval count" hint="Multiplies the interval. e.g. interval Month × count 3 = billed once every 3 months. Leave at 1 for a standard cycle.">
-              <Input type="number" min="1" step="1" value={intervalCount} onChange={(e) => setIntervalCount(e.target.value)} />
+            <Field label="Interval count" hint="Multiplies the interval. e.g. interval Month × count 3 = billed once every 3 months. Leave at 1 for a standard cycle." id="edit-plan-interval-count">
+              <Input id="edit-plan-interval-count" type="number" min="1" step="1" {...register('intervalCount')} />
             </Field>
           </div>
-          <Field label="Trial period (days)" hint="Free days before the first charge. The subscription stays in 'trialing' until it converts. 0 = charge immediately.">
-            <Input type="number" min="0" step="1" value={trialDays} onChange={(e) => setTrialDays(e.target.value)} />
+          <Field label="Trial period (days)" hint="Free days before the first charge. The subscription stays in 'trialing' until it converts. 0 = charge immediately." id="edit-plan-trial-days">
+            <Input id="edit-plan-trial-days" type="number" min="0" step="1" {...register('trialDays')} />
           </Field>
-          {err && <p className="text-xs text-danger">{err}</p>}
+          {updatePlan.isError && (
+            <p className="text-xs text-danger">
+              {updatePlan.error instanceof Error ? updatePlan.error.message : 'Failed to update plan'}
+            </p>
+          )}
           <div className="flex justify-end gap-2 pt-1">
             <Button type="button" variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
-            <Button type="submit" size="sm" disabled={submitting || !name.trim() || !(Number(amountNaira) > 0)}>
-              {submitting ? 'Saving…' : 'Save changes'}
+            <Button type="submit" size="sm" disabled={!isValid || updatePlan.isPending}>
+              {updatePlan.isPending ? 'Saving…' : 'Save changes'}
             </Button>
           </div>
         </form>

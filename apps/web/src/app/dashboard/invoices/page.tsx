@@ -1,6 +1,5 @@
 'use client';
 import { useState } from 'react';
-import useSWR from 'swr';
 import { Topbar } from '@/components/layout/topbar';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,36 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Tabs } from '@/components/ui/tabs';
 import { Table, Thead, Th, Tbody, Tr, Td } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { api } from '@/lib/api';
+import { useInvoices } from '@/lib/queries/invoices';
+import { useCustomers } from '@/lib/queries/customers';
 import { formatKobo, formatDate } from '@/lib/utils';
 import { Download } from 'lucide-react';
-
-interface Invoice {
-  id: string;
-  customer_id: string;
-  subscription_id: string;
-  state: string;
-  currency: string;
-  amount_due: string;
-  amount_paid: string;
-  period_start: string | null;
-  period_end: string | null;
-  due_at: string | null;
-  billing_mode: string;
-  closed_at: string | null;
-  created_at: string;
-}
-
-interface Customer {
-  id: string;
-  name: string;
-  email: string;
-}
-
-interface ListResponse<T> {
-  object: 'list';
-  data: T[];
-}
 
 const FILTER_TABS = [
   { id: 'all', label: 'All' },
@@ -55,23 +28,17 @@ function formatPeriod(start: string | null, end: string | null): string {
 
 export default function InvoicesPage() {
   const [activeTab, setActiveTab] = useState('all');
+  const invoicesQuery = useInvoices();
+  const customersQuery = useCustomers();
 
-  const { data: invoicesData, isLoading: invoicesLoading, error } = useSWR(
-    'invoices',
-    () => api.invoices.list() as Promise<ListResponse<Invoice>>,
-  );
-  const { data: customersData, isLoading: customersLoading } = useSWR(
-    'customers',
-    () => (api.customers.list() as Promise<ListResponse<Customer>>).catch(() => ({ object: 'list' as const, data: [] })),
-  );
-
-  const isLoading = invoicesLoading || customersLoading;
-  const invoices = invoicesData?.data ?? [];
-
+  const invoices = invoicesQuery.data?.data ?? [];
   const customerNames: Record<string, string> = {};
-  if (customersData?.data) {
-    for (const c of customersData.data) customerNames[c.id] = c.name;
-  }
+  for (const c of customersQuery.data?.data ?? []) customerNames[c.id] = c.name;
+
+  // Original code waited for the (best-effort) customer names fetch too
+  // before showing the table, so names are populated on first paint.
+  const isLoading = invoicesQuery.isPending || customersQuery.isPending;
+  const error = invoicesQuery.error instanceof Error ? invoicesQuery.error.message : null;
 
   const filtered = activeTab === 'all'
     ? invoices
@@ -96,7 +63,7 @@ export default function InvoicesPage() {
 
         {error && (
           <Card className="p-4 border-danger/30">
-            <p className="text-sm text-danger">{error instanceof Error ? error.message : 'Failed to load invoices'}</p>
+            <p className="text-sm text-danger">{error ?? 'Failed to load invoices'}</p>
           </Card>
         )}
 

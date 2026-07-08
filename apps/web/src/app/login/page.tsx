@@ -3,43 +3,52 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { api } from '@/lib/api';
 import { USE_MOCKS } from '@/lib/fixtures';
+import { useMagicLink } from '@/lib/queries/auth';
+import { loginSchema, type LoginFormValues } from '@/lib/schemas/auth';
 
 type Step = 'form' | 'sent';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
   const [step, setStep] = useState<Step>('form');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [sentTo, setSentTo] = useState('');
+  const magicLink = useMagicLink();
 
-  async function handleSubmit(e: React.FormEvent) {
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { isValid },
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    mode: 'onChange',
+    defaultValues: { email: '' },
+  });
+
+  // Mock/design mode: there's no backend to authenticate against — just drop fake credentials
+  // and move straight into the dashboard. Pure demo navigation, no validation.
+  function handleMockSubmit(e: React.FormEvent) {
     e.preventDefault();
-    // Mock/design mode: there's no backend to authenticate against — just drop fake credentials
-    // and move straight into the dashboard. Pure demo navigation.
-    if (USE_MOCKS) {
-      localStorage.setItem('nomba_api_key', 'mock');
-      localStorage.setItem('nomba_tenant_id', 'ten_mock_nollybox');
-      router.push('/dashboard');
-      return;
-    }
-    if (!email.trim()) return;
-    setError('');
-    setLoading(true);
-    try {
-      await api.auth.magicLink(email.trim());
-      setStep('sent');
-    } catch (err: any) {
-      setError(err.message ?? 'No account found for this email.');
-    } finally {
-      setLoading(false);
-    }
+    localStorage.setItem('nomba_api_key', 'mock');
+    localStorage.setItem('nomba_tenant_id', 'ten_mock_nollybox');
+    router.push('/dashboard');
   }
+
+  const onSubmitReal = handleSubmit(async (values) => {
+    try {
+      await magicLink.mutateAsync(values.email);
+      setSentTo(values.email);
+      setStep('sent');
+    } catch {
+      // surfaced via magicLink.isError/.error below
+    }
+  });
 
   return (
     <div className="min-h-screen bg-canvas flex items-center justify-center p-4">
@@ -54,22 +63,26 @@ export default function LoginPage() {
 
         <div className="bg-card border border-line rounded-xl p-6 shadow-card">
           {step === 'form' ? (
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={USE_MOCKS ? handleMockSubmit : onSubmitReal} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-body mb-1.5">
+                <label htmlFor="login-email" className="block text-xs font-medium text-body mb-1.5">
                   Business email
                 </label>
                 <Input
+                  id="login-email"
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  {...register('email')}
                   placeholder="billing@acme.ng"
                   autoFocus
                 />
-                {error && <p className="text-xs text-danger mt-1.5">{error}</p>}
+                {magicLink.isError && (
+                  <p className="text-xs text-danger mt-1.5">
+                    {magicLink.error instanceof Error ? magicLink.error.message : 'No account found for this email.'}
+                  </p>
+                )}
               </div>
-              <Button type="submit" className="w-full" disabled={loading || (!USE_MOCKS && !email.trim())}>
-                {loading ? 'Sending…' : USE_MOCKS ? 'Enter dashboard →' : 'Send login link →'}
+              <Button type="submit" className="w-full" disabled={magicLink.isPending || (!USE_MOCKS && !isValid)}>
+                {magicLink.isPending ? 'Sending…' : USE_MOCKS ? 'Enter dashboard →' : 'Send login link →'}
               </Button>
               {USE_MOCKS && (
                 <p className="text-xs text-faint text-center">Demo mode — no login required, click to continue.</p>
@@ -82,10 +95,10 @@ export default function LoginPage() {
               </div>
               <p className="text-sm font-medium text-ink font-display font-semibold tracking-tight">Login link sent</p>
               <p className="text-xs text-mid">
-                We sent a link to <strong>{email}</strong>. Click it to log in — it expires in 7 days.
+                We sent a link to <strong>{sentTo}</strong>. Click it to log in — it expires in 7 days.
               </p>
               <button
-                onClick={() => { setStep('form'); setEmail(''); }}
+                onClick={() => { setStep('form'); reset({ email: '' }); }}
                 className="text-xs text-jade-deep hover:underline"
               >
                 Use a different email

@@ -1,6 +1,7 @@
 'use client';
-import { useState, useEffect } from 'react';
-import useSWR from 'swr';
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Topbar } from '@/components/layout/topbar';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -10,7 +11,18 @@ import { Select } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { Eye, EyeOff, AlertTriangle, CheckCircle, Copy, Check, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '@/lib/api';
+import { useMe } from '@/lib/queries/me';
+import { useApiKeys, useCreateApiKey, useRevokeApiKey } from '@/lib/queries/keys';
+import {
+  useNotificationSettings,
+  useUpdateNotificationSettings,
+  useSendTestNotification,
+} from '@/lib/queries/notification-settings';
+import { useUpdatePolicy } from '@/lib/queries/policy';
+import {
+  billingPolicySchema, type BillingPolicyFormInput, type BillingPolicyFormValues,
+  sendTestNotificationSchema, type SendTestNotificationFormValues,
+} from '@/lib/schemas/settings';
 
 const VERTICAL_TABS = [
   { id: 'general',       label: 'General' },
@@ -56,68 +68,50 @@ export default function SettingsPage() {
   const [showSecret, setShowSecret] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  // Current tenant
-  const [tenant, setTenant] = useState<{ id: string; name: string } | null>(null);
-  useEffect(() => {
-    api.me.get().then((t) => setTenant({ id: t.id, name: t.name })).catch(() => {});
-  }, []);
+  const meQuery = useMe();
+  const tenant = meQuery.data;
 
-  // Billing policy state
-  const [upgradeStrategy, setUpgradeStrategy] = useState('immediate_prorated');
-  const [downgradeStrategy, setDowngradeStrategy] = useState('at_period_end');
-  const [dunningChanges, setDunningChanges] = useState('gate_upgrades');
-  const [graceDays, setGraceDays] = useState('7');
-  const [maxDebt, setMaxDebt] = useState('5000');
-  const [maxAttempts, setMaxAttempts] = useState('4');
-  const [paydayDay, setPaydayDay] = useState('25');
-
-  // Clock state
+  // Clock state (Test Mode tab is pre-existing demo UI, not wired to the
+  // real clock/tick endpoints — left exactly as-is, not in migration scope)
   const [clockSeconds, setClockSeconds] = useState('');
   const [tickRunning, setTickRunning] = useState(false);
 
-  // API keys — only fetch when on the apikeys tab (null key = disabled)
-  type ApiKey = { id: string; prefix: string; mode: string; created_at: string; revoked_at: string | null };
-  const { data: keysData, isLoading: keysLoading, mutate: mutateKeys } = useSWR(
-    activeTab === 'apikeys' ? 'api-keys' : null,
-    () => api.keys.list() as Promise<{ data: ApiKey[] }>,
-  );
-  const keys: ApiKey[] = keysData?.data ?? [];
+  // API keys
+  const apiKeysQuery = useApiKeys(activeTab === 'apikeys');
+  const keys = apiKeysQuery.data?.data ?? [];
+  const createApiKey = useCreateApiKey();
+  const revokeApiKey = useRevokeApiKey();
   const [newKey, setNewKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [creating, setCreating] = useState(false);
+  const [rotatingId, setRotatingId] = useState<string | null>(null);
 
-  // Notification settings state
+  // Notification settings
+  const notificationSettingsQuery = useNotificationSettings(activeTab === 'notifications');
+  const updateNotificationSettings = useUpdateNotificationSettings();
+  const sendTestNotification = useSendTestNotification();
   const [notifSms, setNotifSms] = useState(true);
   const [notifEmail, setNotifEmail] = useState(true);
   const [notifBrand, setNotifBrand] = useState('');
   const [notifDisabled, setNotifDisabled] = useState<string[]>([]);
   const [notifSaved, setNotifSaved] = useState(false);
-  const [notifSaving, setNotifSaving] = useState(false);
-  const [testChannel, setTestChannel] = useState<'sms' | 'email'>('sms');
-  const [testTo, setTestTo] = useState('');
   const [testResult, setTestResult] = useState<{ ok: boolean; text: string } | null>(null);
-  const [testing, setTesting] = useState(false);
 
   useEffect(() => {
-    if (activeTab !== 'notifications') return;
-    api.notificationSettings.get()
-      .then((s: any) => {
-        setNotifSms(s.sms_enabled ?? true);
-        setNotifEmail(s.email_enabled ?? true);
-        setNotifBrand(s.brand_override ?? '');
-        setNotifDisabled(s.disabled_events ?? []);
-      })
-      .catch(() => {});
-  }, [activeTab]);
+    const s = notificationSettingsQuery.data;
+    if (!s) return;
+    setNotifSms(s.sms_enabled ?? true);
+    setNotifEmail(s.email_enabled ?? true);
+    setNotifBrand(s.brand_override ?? '');
+    setNotifDisabled(s.disabled_events ?? []);
+  }, [notificationSettingsQuery.data]);
 
   function toggleEvent(key: string) {
     setNotifDisabled((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
   }
 
   async function saveNotifSettings() {
-    setNotifSaving(true);
     try {
-      await api.notificationSettings.update({
+      await updateNotificationSettings.mutateAsync({
         sms_enabled:     notifSms,
         email_enabled:   notifEmail,
         brand_override:  notifBrand.trim() || null,
@@ -130,49 +124,65 @@ export default function SettingsPage() {
       toast.error("Couldn't save notification settings", {
         description: e instanceof Error ? e.message : undefined,
       });
-    } finally {
-      setNotifSaving(false);
     }
   }
 
-  async function sendTest() {
-    setTesting(true);
+  const {
+    register: registerTest,
+    handleSubmit: handleSubmitTest,
+    watch: watchTest,
+    formState: { isValid: testIsValid },
+  } = useForm<SendTestNotificationFormValues>({
+    resolver: zodResolver(sendTestNotificationSchema),
+    mode: 'onChange',
+    defaultValues: { channel: 'sms', to: '' },
+  });
+  const testChannel = watchTest('channel');
+
+  const onSendTest = handleSubmitTest(async (values) => {
     setTestResult(null);
     try {
-      const r: any = await api.notificationSettings.test(testChannel, testTo.trim());
+      const r = await sendTestNotification.mutateAsync({ channel: values.channel, to: values.to });
       setTestResult({ ok: !!r.ok, text: r.ok ? 'Sent — check the recipient.' : `Failed: ${r.error ?? 'provider error'}` });
     } catch {
       setTestResult({ ok: false, text: 'Failed — check the provider is configured (Twilio / SMTP).' });
-    } finally {
-      setTesting(false);
     }
-  }
+  });
 
   async function createKey() {
-    setCreating(true);
     try {
-      const res = await api.keys.create('live');
+      const res = await createApiKey.mutateAsync('live');
       setNewKey(res.api_key);
-      mutateKeys();
-    } catch {} finally { setCreating(false); }
+      toast.success('New live API key created — copy it now, it won’t be shown again');
+    } catch (e) {
+      toast.error("Couldn't create API key", { description: e instanceof Error ? e.message : undefined });
+    }
   }
 
   async function revokeKey(id: string) {
     if (!confirm('Revoke this key? Any requests using it will stop working immediately.')) return;
-    await api.keys.revoke(id);
-    mutateKeys();
+    try {
+      await revokeApiKey.mutateAsync(id);
+      toast.success('API key revoked');
+    } catch (e) {
+      toast.error("Couldn't revoke key", { description: e instanceof Error ? e.message : undefined });
+    }
   }
 
-  async function rotateKey(k: ApiKey) {
+  // Rotate = create a fresh key (same mode) and revoke the old one. The new full key is
+  // shown once in the banner — copy it before leaving the page.
+  async function rotateKey(k: { id: string; mode: string }) {
     if (!confirm('Rotate this key? A new key is created and this one is revoked immediately.')) return;
-    setCreating(true);
+    setRotatingId(k.id);
     try {
-      const res = await api.keys.create(k.mode as 'live' | 'test');
+      const res = await createApiKey.mutateAsync(k.mode as 'live' | 'test');
       setNewKey(res.api_key);
-      await api.keys.revoke(k.id);
-      mutateKeys();
-    } catch {} finally {
-      setCreating(false);
+      await revokeApiKey.mutateAsync(k.id);
+      toast.success('Key rotated — copy the new key now, it won’t be shown again');
+    } catch (e) {
+      toast.error("Couldn't rotate key", { description: e instanceof Error ? e.message : undefined });
+    } finally {
+      setRotatingId(null);
     }
   }
 
@@ -183,19 +193,38 @@ export default function SettingsPage() {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  async function handleSave() {
+  const updatePolicy = useUpdatePolicy();
+  const {
+    register: registerBilling,
+    formState: { errors: billingErrors },
+    handleSubmit: handleSubmitBilling,
+  } = useForm<BillingPolicyFormInput, any, BillingPolicyFormValues>({
+    resolver: zodResolver(billingPolicySchema),
+    mode: 'onChange',
+    defaultValues: {
+      upgradeStrategy: 'immediate_prorated',
+      downgradeStrategy: 'at_period_end',
+      dunningChanges: 'gate_upgrades',
+      graceDays: 7,
+      maxDebt: 5000,
+      maxAttempts: 4,
+      paydayDay: 25,
+    },
+  });
+
+  const onSaveBilling = handleSubmitBilling(async (values) => {
     try {
       // Persist the billing policy for real. Field names follow the API's
       // snake_case convention — confirm the exact payload shape with the engine
       // if a field is rejected (api.policy.update is currently untyped).
-      await api.policy.update({
-        upgrade_strategy: upgradeStrategy,
-        downgrade_strategy: downgradeStrategy,
-        dunning_change_policy: dunningChanges,
-        grace_days: Number(graceDays),
-        max_debt_kobo: Number(maxDebt),
-        max_attempts: Number(maxAttempts),
-        payday_day: Number(paydayDay),
+      await updatePolicy.mutateAsync({
+        upgrade_strategy: values.upgradeStrategy,
+        downgrade_strategy: values.downgradeStrategy,
+        dunning_change_policy: values.dunningChanges,
+        grace_days: values.graceDays,
+        max_debt_kobo: values.maxDebt,
+        max_attempts: values.maxAttempts,
+        payday_day: values.paydayDay,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -205,7 +234,7 @@ export default function SettingsPage() {
         description: e instanceof Error ? e.message : undefined,
       });
     }
-  }
+  });
 
   async function runTick() {
     setTickRunning(true);
@@ -247,12 +276,12 @@ export default function SettingsPage() {
                   <CardHeader><CardTitle>Tenant</CardTitle></CardHeader>
                   <CardContent className="space-y-4">
                     <div>
-                      <label className="block text-xs font-medium text-body mb-1.5">Tenant Name</label>
-                      <Input value={tenant?.name ?? ''} readOnly className="bg-soft" />
+                      <label htmlFor="tenant-name" className="block text-xs font-medium text-body mb-1.5">Tenant Name</label>
+                      <Input id="tenant-name" value={tenant?.name ?? ''} readOnly className="bg-soft" />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-body mb-1.5">Tenant ID</label>
-                      <Input value={tenant?.id ?? ''} readOnly className="font-mono bg-soft" />
+                      <label htmlFor="tenant-id" className="block text-xs font-medium text-body mb-1.5">Tenant ID</label>
+                      <Input id="tenant-id" value={tenant?.id ?? ''} readOnly className="font-mono bg-soft" />
                     </div>
                   </CardContent>
                 </Card>
@@ -279,9 +308,10 @@ export default function SettingsPage() {
                       <Input placeholder="https://your-app.com/webhooks" />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-body mb-1.5">Signing Secret</label>
+                      <label htmlFor="webhook-signing-secret" className="block text-xs font-medium text-body mb-1.5">Signing Secret</label>
                       <div className="flex items-center gap-2">
                         <Input
+                          id="webhook-signing-secret"
                           type={showSecret ? 'text' : 'password'}
                           value="whsec_abcdef1234567890"
                           readOnly
@@ -289,6 +319,7 @@ export default function SettingsPage() {
                         />
                         <button
                           onClick={() => setShowSecret(!showSecret)}
+                          aria-label={showSecret ? 'Hide signing secret' : 'Show signing secret'}
                           className="text-faint hover:text-mid p-2"
                         >
                           {showSecret ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -307,9 +338,9 @@ export default function SettingsPage() {
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle>API Keys</CardTitle>
-                      <Button size="sm" onClick={createKey} disabled={creating}>
+                      <Button size="sm" onClick={createKey} disabled={createApiKey.isPending}>
                         <Plus size={14} className="mr-1.5" />
-                        {creating ? 'Creating…' : 'New key'}
+                        {createApiKey.isPending ? 'Creating…' : 'New key'}
                       </Button>
                     </div>
                   </CardHeader>
@@ -327,7 +358,7 @@ export default function SettingsPage() {
                       </div>
                     )}
 
-                    {keysLoading ? (
+                    {apiKeysQuery.isPending ? (
                       <div className="space-y-3 py-2">
                         {[0, 1].map((i) => (
                           <div key={i} className="flex items-center justify-between py-3 border-b border-line last:border-0">
@@ -355,7 +386,7 @@ export default function SettingsPage() {
                             </div>
                             {!k.revoked_at && (
                               <div className="flex items-center gap-3">
-                                <button onClick={() => rotateKey(k)} disabled={creating} className="text-xs font-medium text-mid hover:text-jade-deep disabled:opacity-50">
+                                <button onClick={() => rotateKey(k)} disabled={rotatingId === k.id} className="text-xs font-medium text-mid hover:text-jade-deep disabled:opacity-50">
                                   Rotate
                                 </button>
                                 <button onClick={() => revokeKey(k.id)} title="Revoke" className="text-faint/70 hover:text-danger transition-colors">
@@ -392,30 +423,30 @@ export default function SettingsPage() {
                   <CardHeader><CardTitle>Policy Knobs</CardTitle></CardHeader>
                   <CardContent className="space-y-4">
                     <div>
-                      <label className="block text-xs font-medium text-body mb-1.5" title="When a customer upgrades, charge immediately with proration or wait until the next billing period">
+                      <label htmlFor="policy-upgrade-strategy" className="block text-xs font-medium text-body mb-1.5" title="When a customer upgrades, charge immediately with proration or wait until the next billing period">
                         Upgrade Strategy
                       </label>
-                      <Select value={upgradeStrategy} onChange={(e) => setUpgradeStrategy(e.target.value)}>
+                      <Select id="policy-upgrade-strategy" {...registerBilling('upgradeStrategy')}>
                         <option value="immediate_prorated">Immediate (prorated)</option>
                         <option value="at_period_end">At period end</option>
                       </Select>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-body mb-1.5" title="When a customer downgrades, apply at end of period or immediately with credit">
+                      <label htmlFor="policy-downgrade-strategy" className="block text-xs font-medium text-body mb-1.5" title="When a customer downgrades, apply at end of period or immediately with credit">
                         Downgrade Strategy
                       </label>
-                      <Select value={downgradeStrategy} onChange={(e) => setDowngradeStrategy(e.target.value)}>
+                      <Select id="policy-downgrade-strategy" {...registerBilling('downgradeStrategy')}>
                         <option value="at_period_end">At period end</option>
                         <option value="immediate_credit">Immediate (with credit)</option>
                       </Select>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-body mb-1.5" title="What plan changes to allow while a subscription is in dunning">
+                      <label htmlFor="policy-dunning-changes" className="block text-xs font-medium text-body mb-1.5" title="What plan changes to allow while a subscription is in dunning">
                         Changes During Dunning
                       </label>
-                      <Select value={dunningChanges} onChange={(e) => setDunningChanges(e.target.value)}>
+                      <Select id="policy-dunning-changes" {...registerBilling('dunningChanges')}>
                         <option value="gate_upgrades">Gate upgrades only</option>
                         <option value="block_all">Block all</option>
                         <option value="allow_all">Allow all</option>
@@ -424,37 +455,41 @@ export default function SettingsPage() {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-medium text-body mb-1.5" title="Days of grace period after a charge fails before subscription is cancelled">
+                        <label htmlFor="policy-grace-days" className="block text-xs font-medium text-body mb-1.5" title="Days of grace period after a charge fails before subscription is cancelled">
                           Grace Period (days)
                         </label>
-                        <Input type="number" value={graceDays} onChange={(e) => setGraceDays(e.target.value)} min="1" max="30" />
+                        <Input id="policy-grace-days" type="number" {...registerBilling('graceDays')} min="1" max="30" />
+                        {billingErrors.graceDays && <p className="text-xs text-danger mt-1">{billingErrors.graceDays.message}</p>}
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-body mb-1.5" title="Maximum amount of debt allowed before marking a subscription delinquent">
+                        <label htmlFor="policy-max-debt" className="block text-xs font-medium text-body mb-1.5" title="Maximum amount of debt allowed before marking a subscription delinquent">
                           Max Debt Cap (₦)
                         </label>
-                        <Input type="number" value={maxDebt} onChange={(e) => setMaxDebt(e.target.value)} />
+                        <Input id="policy-max-debt" type="number" {...registerBilling('maxDebt')} />
+                        {billingErrors.maxDebt && <p className="text-xs text-danger mt-1">{billingErrors.maxDebt.message}</p>}
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-medium text-body mb-1.5" title="Number of payment retry attempts before marking as delinquent">
+                        <label htmlFor="policy-max-attempts" className="block text-xs font-medium text-body mb-1.5" title="Number of payment retry attempts before marking as delinquent">
                           Max Dunning Attempts
                         </label>
-                        <Input type="number" value={maxAttempts} onChange={(e) => setMaxAttempts(e.target.value)} min="1" max="6" />
+                        <Input id="policy-max-attempts" type="number" {...registerBilling('maxAttempts')} min="1" max="6" />
+                        {billingErrors.maxAttempts && <p className="text-xs text-danger mt-1">{billingErrors.maxAttempts.message}</p>}
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-body mb-1.5" title="Day of month to attempt charges (for payday-aligned billing)">
+                        <label htmlFor="policy-payday-day" className="block text-xs font-medium text-body mb-1.5" title="Day of month to attempt charges (for payday-aligned billing)">
                           Payday Day (1–31)
                         </label>
-                        <Input type="number" value={paydayDay} onChange={(e) => setPaydayDay(e.target.value)} min="1" max="31" />
+                        <Input id="policy-payday-day" type="number" {...registerBilling('paydayDay')} min="1" max="31" />
+                        {billingErrors.paydayDay && <p className="text-xs text-danger mt-1">{billingErrors.paydayDay.message}</p>}
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3">
-                      <Button onClick={handleSave}>
-                        {saved ? '✓ Saved' : 'Save policy'}
+                      <Button onClick={onSaveBilling} disabled={updatePolicy.isPending}>
+                        {saved ? '✓ Saved' : updatePolicy.isPending ? 'Saving…' : 'Save policy'}
                       </Button>
                       {saved && <span className="text-xs text-jade-deep">Changes saved</span>}
                     </div>
@@ -488,8 +523,8 @@ export default function SettingsPage() {
                 <Card>
                   <CardHeader><CardTitle>Brand</CardTitle></CardHeader>
                   <CardContent className="space-y-2">
-                    <label className="block text-xs font-medium text-body">Sender / brand name</label>
-                    <Input value={notifBrand} onChange={(e) => setNotifBrand(e.target.value)} placeholder={tenant?.name ?? 'Your business name'} />
+                    <label htmlFor="notif-brand" className="block text-xs font-medium text-body">Sender / brand name</label>
+                    <Input id="notif-brand" value={notifBrand} onChange={(e) => setNotifBrand(e.target.value)} placeholder={tenant?.name ?? 'Your business name'} />
                     <p className="text-xs text-mid">
                       Shown to customers in every SMS and email. Leave blank to use your business name
                       {' '}(<span className="font-medium">{tenant?.name ?? '—'}</span>).
@@ -513,8 +548,8 @@ export default function SettingsPage() {
                 </Card>
 
                 <div className="flex items-center gap-3">
-                  <Button onClick={saveNotifSettings} disabled={notifSaving}>
-                    {notifSaved ? '✓ Saved' : notifSaving ? 'Saving…' : 'Save notifications'}
+                  <Button onClick={saveNotifSettings} disabled={updateNotificationSettings.isPending}>
+                    {notifSaved ? '✓ Saved' : updateNotificationSettings.isPending ? 'Saving…' : 'Save notifications'}
                   </Button>
                   {notifSaved && <span className="text-xs text-jade-deep">Changes saved</span>}
                 </div>
@@ -523,15 +558,15 @@ export default function SettingsPage() {
                   <CardHeader><CardTitle>Send a test</CardTitle></CardHeader>
                   <CardContent className="space-y-3">
                     <div className="grid grid-cols-[120px_1fr] gap-3">
-                      <Select value={testChannel} onChange={(e) => setTestChannel(e.target.value as 'sms' | 'email')}>
+                      <Select aria-label="Test channel" {...registerTest('channel')}>
                         <option value="sms">SMS</option>
                         <option value="email">Email</option>
                       </Select>
-                      <Input value={testTo} onChange={(e) => setTestTo(e.target.value)} placeholder={testChannel === 'sms' ? '+234…' : 'you@example.com'} />
+                      <Input aria-label="Test recipient" {...registerTest('to')} placeholder={testChannel === 'sms' ? '+234…' : 'you@example.com'} />
                     </div>
                     <div className="flex items-center gap-3">
-                      <Button variant="outline" onClick={sendTest} disabled={testing || !testTo.trim()}>
-                        {testing ? 'Sending…' : 'Send test'}
+                      <Button variant="outline" onClick={onSendTest} disabled={sendTestNotification.isPending || !testIsValid}>
+                        {sendTestNotification.isPending ? 'Sending…' : 'Send test'}
                       </Button>
                       {testResult && (
                         <span className={cn('text-xs', testResult.ok ? 'text-jade-deep' : 'text-danger')}>

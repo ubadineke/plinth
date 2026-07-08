@@ -1,39 +1,40 @@
 'use client';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Zap, CheckCircle, XCircle, Loader2 } from 'lucide-react';
-import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
-
-type State = 'loading' | 'success' | 'error';
+import { useClaimToken } from '@/lib/queries/auth';
 
 function ClaimContent() {
   const router = useRouter();
   const params = useSearchParams();
-  const [state, setState] = useState<State>('loading');
-  const [error, setError] = useState('');
   const isLogin = params.get('mode') === 'login';
+  const token = params.get('token');
+
+  const claimToken = useClaimToken();
+  // .mutate is stable (useMutation memoizes it against the observer, not the
+  // per-render result object), so it's safe in this effect's deps without
+  // the whole (unstable) mutation object re-triggering it on every render.
+  const { mutate: claim } = claimToken;
+  const firedRef = useRef(false);
 
   useEffect(() => {
-    const token = params.get('token');
-    if (!token) {
-      setError('No claim token found in this link.');
-      setState('error');
-      return;
-    }
-
-    api.auth.claim(token)
-      .then((res) => {
+    if (firedRef.current || !token) return;
+    firedRef.current = true;
+    claim(token, {
+      onSuccess: (res) => {
         localStorage.setItem('nomba_api_key', res.api_key);
         localStorage.setItem('nomba_tenant_id', res.tenant_id);
-        setState('success');
         setTimeout(() => router.push('/dashboard'), 1500);
-      })
-      .catch((err) => {
-        setError(err.message ?? 'This link is invalid or has already been used.');
-        setState('error');
-      });
-  }, []);
+      },
+    });
+  }, [token, claim, router]);
+
+  const state: 'loading' | 'success' | 'error' =
+    !token ? 'error' : claimToken.isSuccess ? 'success' : claimToken.isError ? 'error' : 'loading';
+  const errorMessage = !token
+    ? 'No claim token found in this link.'
+    : claimToken.error instanceof Error ? claimToken.error.message : 'This link is invalid or has already been used.';
 
   return (
     <>
@@ -64,7 +65,7 @@ function ClaimContent() {
             <XCircle size={28} className="text-red-500 dark:text-red-400" />
           </div>
           <h1 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Link invalid</h1>
-          <p className="text-sm text-gray-500 dark:text-slate-400">{error}</p>
+          <p className="text-sm text-gray-500 dark:text-slate-400">{errorMessage}</p>
           <Button onClick={() => router.push('/login')} variant="outline" className="w-full">
             Request a new link →
           </Button>

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Container, Section } from "./ui";
 import { Reveal } from "./Reveal";
 import { ArrowRight } from "./icons";
@@ -9,14 +10,12 @@ export default function FinalCTA() {
         <div className="relative overflow-hidden rounded-3xl bg-ink-900 px-6 py-16 text-center md:px-12 md:py-28">
           {/* the plinth itself — big on the background. The mark IS a column on a
               base, so it doubles as the section's meaning: your product stands on it. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/plinth-logo.png"
-            alt=""
+          <div
             aria-hidden
-            loading="lazy"
-            className="pointer-events-none absolute left-1/2 top-1/2 w-[min(640px,108%)] max-w-none -translate-x-1/2 -translate-y-[46%] select-none opacity-70"
-          />
+            className="pointer-events-none absolute left-1/2 top-1/2 aspect-square w-[min(640px,108%)] max-w-none -translate-x-1/2 -translate-y-[46%] select-none opacity-70"
+          >
+            <Image src="/plinth-logo.png" alt="" fill sizes="640px" className="object-contain" />
+          </div>
 
           {/* atmosphere — a slow jade aurora, layered under the mark's own glow */}
           <div

@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import Image from "next/image";
 import { Container, Section } from "./ui";
 import { Reveal } from "./Reveal";
 import {
@@ -144,8 +145,14 @@ export default function UseCases() {
           <Reveal delay={280} className="col-span-1 md:col-start-3 md:row-start-3">
             <div className="relative flex h-full items-center justify-center overflow-hidden rounded-2xl bg-ink-900">
               <div aria-hidden className="absolute -inset-6 bg-jade/10 blur-2xl" />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/plinth-logo.png" alt="" aria-hidden className="relative w-24 select-none" />
+              <Image
+                src="/plinth-logo.png"
+                alt=""
+                aria-hidden
+                width={96}
+                height={96}
+                className="relative w-24 select-none"
+              />
             </div>
           </Reveal>
 
