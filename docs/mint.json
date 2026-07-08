@@ -16,11 +16,11 @@
     }
   },
   "topbarLinks": [
-    { "name": "Dashboard", "url": "https://app.useplinth.com/dashboard" }
+    { "name": "Dashboard", "url": "https://app.useplinth.xyz/dashboard" }
   ],
   "topbarCtaButton": {
     "name": "Get API key",
-    "url": "https://app.useplinth.com/login"
+    "url": "https://app.useplinth.xyz/login"
   },
   "primaryTab": {
     "name": "Documentation"

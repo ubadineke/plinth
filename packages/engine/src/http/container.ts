@@ -48,7 +48,7 @@ import { PolicyService } from '../services/policy.service.js';
 import { SandboxService } from '../services/sandbox.service.js';
 import { ApplicationService } from '../services/application.service.js';
 import { AuthService } from '../services/auth.service.js';
-import { NodemailerEmailService, NoopEmailService, type EmailService } from '../services/email.service.js';
+import { ResendEmailService, NoopEmailService, type EmailService } from '../services/email.service.js';
 import { DrizzleClaimTokenRepo } from '../db/claim-token.repo.js';
 import { DrizzleApplicationRepo } from '../db/application.repo.js';
 import { DrizzleCardTokenRepo } from '../db/card-token.repo.js';
@@ -158,9 +158,9 @@ export function buildContainer(): Container {
     env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && env.TWILIO_FROM_NUMBER
       ? new TwilioSmsAdapter(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN, env.TWILIO_FROM_NUMBER)
       : new NoopSmsAdapter();
-  // Email notifications: Nodemailer when SMTP is configured, otherwise a Noop that just logs.
-  const emailService: EmailService = env.SMTP_USER && env.SMTP_PASS
-    ? new NodemailerEmailService(env.SMTP_USER, env.SMTP_PASS, env.SMTP_FROM_NAME)
+  // Email notifications: Resend when configured, otherwise a Noop that just logs.
+  const emailService: EmailService = env.RESEND_API_KEY && env.EMAIL_FROM
+    ? new ResendEmailService(env.RESEND_API_KEY, env.EMAIL_FROM, env.SMTP_FROM_NAME)
     : new NoopEmailService();
   const notificationLogRepo = new DrizzleNotificationLogRepo();
   const notificationSettingsRepo = new DrizzleNotificationSettingsRepo();

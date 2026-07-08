@@ -14,7 +14,7 @@ Admin endpoints are scoped to test-mode keys only (`sk_test_`). They're not avai
 Get the current simulated time for your sandbox tenant.
 
 ```bash
-curl https://api.useplinth.com/admin/clock \
+curl https://api.useplinth.xyz/admin/clock \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY"
 ```
 
@@ -33,7 +33,7 @@ curl https://api.useplinth.com/admin/clock \
 Advance the simulated clock by a number of seconds.
 
 ```bash
-curl -X POST https://api.useplinth.com/admin/clock/advance \
+curl -X POST https://api.useplinth.xyz/admin/clock/advance \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY" \
   -H "Content-Type: application/json" \
   -d '{"seconds": 2592000}'
@@ -61,7 +61,7 @@ Advancing the clock alone doesn't trigger billing. Follow with `POST /admin/tick
 Run the billing engine for your tenant at the current simulated time. This processes subscription renewals, dunning retries, grace expiries, and state transitions.
 
 ```bash
-curl -X POST https://api.useplinth.com/admin/tick \
+curl -X POST https://api.useplinth.xyz/admin/tick \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY"
 ```
 
@@ -89,7 +89,7 @@ curl -X POST https://api.useplinth.com/admin/tick \
 List transfers that arrived but couldn't be matched to an open invoice.
 
 ```bash
-curl https://api.useplinth.com/admin/suspense \
+curl https://api.useplinth.xyz/admin/suspense \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY"
 ```
 
@@ -114,7 +114,7 @@ curl https://api.useplinth.com/admin/suspense \
 Manually apply a suspense transfer to a specific invoice, or credit it to the customer's balance.
 
 ```bash
-curl -X POST https://api.useplinth.com/admin/suspense/susp_01JABC.../resolve \
+curl -X POST https://api.useplinth.xyz/admin/suspense/susp_01JABC.../resolve \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY" \
   -H "Content-Type: application/json" \
   -d '{

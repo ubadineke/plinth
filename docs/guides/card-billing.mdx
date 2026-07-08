@@ -12,13 +12,13 @@ Card billing is the simplest setup. Your customer enters their card details once
     <CodeGroup>
     ```bash cURL
     # Create the plan group
-    curl -X POST https://api.useplinth.com/v1/plan-groups \
+    curl -X POST https://api.useplinth.xyz/v1/plan-groups \
       -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY" \
       -H "Content-Type: application/json" \
       -d '{"name": "Core Plans"}'
 
     # Create a plan inside it
-    curl -X POST https://api.useplinth.com/v1/plan-groups/pg_01JABC.../plans \
+    curl -X POST https://api.useplinth.xyz/v1/plan-groups/pg_01JABC.../plans \
       -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY" \
       -H "Content-Type: application/json" \
       -d '{
@@ -45,7 +45,7 @@ Card billing is the simplest setup. Your customer enters their card details once
   <Step title="Create a customer">
     <CodeGroup>
     ```bash cURL
-    curl -X POST https://api.useplinth.com/v1/customers \
+    curl -X POST https://api.useplinth.xyz/v1/customers \
       -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY" \
       -H "Content-Type: application/json" \
       -d '{
@@ -83,7 +83,7 @@ Card billing is the simplest setup. Your customer enters their card details once
   <Step title="Create the subscription">
     <CodeGroup>
     ```bash cURL
-    curl -X POST https://api.useplinth.com/v1/subscriptions \
+    curl -X POST https://api.useplinth.xyz/v1/subscriptions \
       -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY" \
       -H "Content-Type: application/json" \
       -H "Idempotency-Key: sub-kuda-pro-jun26" \

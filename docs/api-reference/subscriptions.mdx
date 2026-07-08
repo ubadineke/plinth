@@ -9,7 +9,7 @@ Create a subscription for a customer.
 
 <CodeGroup>
 ```bash cURL
-curl -X POST https://api.useplinth.com/v1/subscriptions \
+curl -X POST https://api.useplinth.xyz/v1/subscriptions \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY" \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: sub-acme-pro-jun26" \
@@ -64,7 +64,7 @@ const subscription = await client.subscriptions.create({
 Retrieve a subscription.
 
 ```bash
-curl https://api.useplinth.com/v1/subscriptions/sub_01JABC... \
+curl https://api.useplinth.xyz/v1/subscriptions/sub_01JABC... \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY"
 ```
 
@@ -91,7 +91,7 @@ curl https://api.useplinth.com/v1/subscriptions/sub_01JABC... \
 Get a quick status summary — state, next billing date, and how long the subscription has been in the current state.
 
 ```bash
-curl https://api.useplinth.com/v1/subscriptions/sub_01JABC.../status \
+curl https://api.useplinth.xyz/v1/subscriptions/sub_01JABC.../status \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY"
 ```
 
@@ -116,7 +116,7 @@ Cancel a subscription. **No body** — the behaviour follows the tenant's `cance
 - **`immediate`** — the subscription moves to `canceled` now; access ends immediately.
 
 ```bash cURL
-curl -X POST https://api.useplinth.com/v1/subscriptions/sub_01JABC.../cancel \
+curl -X POST https://api.useplinth.xyz/v1/subscriptions/sub_01JABC.../cancel \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY"
 ```
 
@@ -149,7 +149,7 @@ while the subscription is still active (before it has actually ended); on an alr
 subscription this returns `409` — start a new subscription instead.
 
 ```bash cURL
-curl -X POST https://api.useplinth.com/v1/subscriptions/sub_01JABC.../reactivate \
+curl -X POST https://api.useplinth.xyz/v1/subscriptions/sub_01JABC.../reactivate \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY"
 ```
 

@@ -22,7 +22,7 @@ The shared sandbox is a real tenant pre-seeded with three plans and a test custo
 
 ```bash
 # Try it right now — list the pre-seeded plans
-curl https://api.useplinth.com/v1/plans \
+curl https://api.useplinth.xyz/v1/plans \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY"
 ```
 
@@ -53,11 +53,11 @@ One call gives you an isolated tenant with your own API key, plans, and clock. I
 
     <CodeGroup>
     ```bash cURL
-    curl -X POST https://api.useplinth.com/sandbox/create
+    curl -X POST https://api.useplinth.xyz/sandbox/create
     ```
 
     ```typescript Node.js
-    const res = await fetch('https://api.useplinth.com/sandbox/create', {
+    const res = await fetch('https://api.useplinth.xyz/sandbox/create', {
       method: 'POST',
     });
     const sandbox = await res.json();
@@ -98,7 +98,7 @@ One call gives you an isolated tenant with your own API key, plans, and clock. I
   <Step title="Run calls against your isolated tenant">
     ```bash
     # Subscribe your pre-seeded customer to Pro
-    curl -X POST https://api.useplinth.com/v1/subscriptions \
+    curl -X POST https://api.useplinth.xyz/v1/subscriptions \
       -H "Authorization: Bearer $NOMBA_KEY" \
       -H "Content-Type: application/json" \
       -d "{
@@ -114,12 +114,12 @@ One call gives you an isolated tenant with your own API key, plans, and clock. I
 
     ```bash
     # Advance 1 month
-    curl -X POST https://api.useplinth.com/admin/clock/advance \
+    curl -X POST https://api.useplinth.xyz/admin/clock/advance \
       -H "Authorization: Bearer $NOMBA_KEY" \
       -d '{"advanceSeconds": 2592000}'
 
     # Run the billing tick
-    curl -X POST "https://api.useplinth.com/admin/tick?tenant_id=<your tenant id>" \
+    curl -X POST "https://api.useplinth.xyz/admin/tick?tenant_id=<your tenant id>" \
       -H "Authorization: Bearer $NOMBA_KEY"
     ```
   </Step>

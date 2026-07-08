@@ -8,6 +8,13 @@ Plinth is tenant-agnostic: each business is a **tenant** that onboards, gets API
 its plans and billing policy, and bills its own customers. (The `nollybox` app is a demo
 consumer, not part of Plinth.)
 
+**▶ Demo video:** https://youtu.be/u3Z_KNJPMBg — the full lifecycle end to end (subscribe → failed
+renewal → automated dunning → recovery by bank transfer), across the customer app and the billing dashboard.
+
+> **Reviewing the dashboard?** Login is passwordless (magic link tied to a business email), so it isn't
+> open to anonymous sign-in. To click through the full UI with sample data and no backend, run it in
+> **mock mode** (`NEXT_PUBLIC_USE_MOCKS=true`) — see [Dashboard mock mode](#dashboard-mock-mode-no-backend-needed) below.
+
 ---
 
 ## What it does
@@ -81,7 +88,7 @@ cd docs && mintlify dev
 
 ### Dashboard mock mode (no backend needed)
 
-For **design / UI work**, the dashboard can run against built-in fixtures instead of the engine —
+For **design / UI work — or to explore the product hands-on** — the dashboard can run against built-in fixtures instead of the engine —
 no Postgres, no seeding, every page fully populated with realistic data in **every state**
 (subscriptions across all lifecycle states, a full dunning board, notifications with sent/failed
 rows, webhook deliveries in every status, etc.).

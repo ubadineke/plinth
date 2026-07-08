@@ -88,7 +88,7 @@ function OnboardingView({ onDismiss }: { onDismiss: () => void }) {
               {
                 step: 1,
                 title: 'Create a customer',
-                code: `curl -X POST https://api.useplinth.com/v1/customers \\
+                code: `curl -X POST https://api.useplinth.xyz/v1/customers \\
   -H "Authorization: Bearer ${DEMO_API_KEY}" \\
   -d '{"name":"Acme Corp","email":"billing@acme.ng"}'`,
                 href: '/docs/api-reference/create-customer',
@@ -96,7 +96,7 @@ function OnboardingView({ onDismiss }: { onDismiss: () => void }) {
               {
                 step: 2,
                 title: 'Subscribe them to a plan',
-                code: `curl -X POST https://api.useplinth.com/v1/subscriptions \\
+                code: `curl -X POST https://api.useplinth.xyz/v1/subscriptions \\
   -H "Authorization: Bearer ${DEMO_API_KEY}" \\
   -d '{"customer_id":"cus_...","plan_id":"pln_..."}'`,
                 href: '/docs/api-reference/create-subscription',
@@ -104,7 +104,7 @@ function OnboardingView({ onDismiss }: { onDismiss: () => void }) {
               {
                 step: 3,
                 title: 'Check entitlements before serving features',
-                code: `curl https://api.useplinth.com/v1/customers/cus_.../entitlements \\
+                code: `curl https://api.useplinth.xyz/v1/customers/cus_.../entitlements \\
   -H "Authorization: Bearer ${DEMO_API_KEY}"`,
                 href: '/docs/api-reference/get-customer-entitlements',
               },

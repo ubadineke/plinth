@@ -11,7 +11,7 @@ Before committing a plan change, call the preview endpoint. It tells you exactly
 
 <CodeGroup>
 ```bash cURL
-curl -X POST https://api.useplinth.com/v1/subscriptions/sub_01JABC.../preview-change \
+curl -X POST https://api.useplinth.xyz/v1/subscriptions/sub_01JABC.../preview-change \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY" \
   -H "Content-Type: application/json" \
   -d '{"new_plan_id": "plan_max_01..."}'
@@ -59,7 +59,7 @@ Once the customer confirms, commit:
 
 <CodeGroup>
 ```bash cURL
-curl -X POST https://api.useplinth.com/v1/subscriptions/sub_01JABC.../change-plan \
+curl -X POST https://api.useplinth.xyz/v1/subscriptions/sub_01JABC.../change-plan \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY" \
   -H "Content-Type: application/json" \
   -d '{"new_plan_id": "plan_max_01..."}'
@@ -96,7 +96,7 @@ card** (e.g. they pay by bank transfer), that charge can't happen — `/change` 
 `no_payment_method`. Instead of dead-ending, collect the prorated difference via a checkout:
 
 ```bash
-curl -X POST https://api.useplinth.com/v1/subscriptions/sub_01JABC.../change-checkout \
+curl -X POST https://api.useplinth.xyz/v1/subscriptions/sub_01JABC.../change-checkout \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY" \
   -d '{ "plan_id": "pln_01STANDARD..." }'
 ```
@@ -111,7 +111,7 @@ invoice) when the webhook confirms payment, emitting `subscription.upgraded`. Se
 If the customer changes their mind before the scheduled change fires:
 
 ```bash
-curl -X DELETE https://api.useplinth.com/v1/subscriptions/sub_01JABC.../scheduled-change \
+curl -X DELETE https://api.useplinth.xyz/v1/subscriptions/sub_01JABC.../scheduled-change \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY"
 ```
 

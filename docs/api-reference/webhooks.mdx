@@ -9,7 +9,7 @@ verifying signatures and handling events — see [Receiving webhooks](/guides/re
 ## Create an endpoint
 
 ```bash cURL
-curl -X POST https://api.useplinth.com/v1/webhook-endpoints \
+curl -X POST https://api.useplinth.xyz/v1/webhook-endpoints \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "url": "https://yourapp.com/api/plinth/webhook", "description": "Production" }'
@@ -47,7 +47,7 @@ curl -X POST https://api.useplinth.com/v1/webhook-endpoints \
 ## List endpoints
 
 ```bash cURL
-curl https://api.useplinth.com/v1/webhook-endpoints \
+curl https://api.useplinth.xyz/v1/webhook-endpoints \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY"
 ```
 
@@ -58,7 +58,7 @@ Returns `{ "object": "list", "data": [ <webhook_endpoint>, … ] }` (secrets omi
 `PATCH` any of `url`, `description`, `enabled`, `event_types`.
 
 ```bash cURL
-curl -X PATCH https://api.useplinth.com/v1/webhook-endpoints/whep_01KWG... \
+curl -X PATCH https://api.useplinth.xyz/v1/webhook-endpoints/whep_01KWG... \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "enabled": false }'
@@ -69,14 +69,14 @@ curl -X PATCH https://api.useplinth.com/v1/webhook-endpoints/whep_01KWG... \
 Issues a fresh `whsec_…` (returned once) and invalidates the old one.
 
 ```bash cURL
-curl -X POST https://api.useplinth.com/v1/webhook-endpoints/whep_01KWG.../rotate-secret \
+curl -X POST https://api.useplinth.xyz/v1/webhook-endpoints/whep_01KWG.../rotate-secret \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY"
 ```
 
 ## Delete an endpoint
 
 ```bash cURL
-curl -X DELETE https://api.useplinth.com/v1/webhook-endpoints/whep_01KWG... \
+curl -X DELETE https://api.useplinth.xyz/v1/webhook-endpoints/whep_01KWG... \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY"
 ```
 
@@ -86,7 +86,7 @@ Every event × endpoint produces a delivery row with status and retry history �
 dashboard **Webhooks** view shows.
 
 ```bash cURL
-curl https://api.useplinth.com/v1/webhook-endpoints/whep_01KWG.../deliveries \
+curl https://api.useplinth.xyz/v1/webhook-endpoints/whep_01KWG.../deliveries \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY"
 ```
 
@@ -119,7 +119,7 @@ marked `failed`. `status` is one of `pending | retrying | succeeded | failed`.
 Re-queue a delivery for an immediate re-attempt (e.g. after fixing your endpoint).
 
 ```bash cURL
-curl -X POST https://api.useplinth.com/v1/webhook-endpoints/whep_01KWG.../deliveries/whd_01KWG.../resend \
+curl -X POST https://api.useplinth.xyz/v1/webhook-endpoints/whep_01KWG.../deliveries/whd_01KWG.../resend \
   -H "Authorization: Bearer sk_test_DOCS_SHARED_KEY"
 ```
 

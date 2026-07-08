@@ -1,5 +1,3 @@
-import { createTransport, type Transporter } from 'nodemailer';
-
 export interface SendEmailOptions {
   to: string;
   subject: string;
@@ -14,29 +12,34 @@ export interface EmailService {
   send(opts: SendEmailOptions): Promise<void>;
 }
 
-export class NodemailerEmailService implements EmailService {
-  private readonly transporter: Transporter;
-  private readonly user: string;
-  private readonly defaultFromName: string;
-
-  constructor(user: string, pass: string, fromName = 'Plinth') {
-    this.user = user;
-    this.defaultFromName = fromName;
-    this.transporter = createTransport({
-      service: 'gmail',
-      auth: { user, pass },
-    });
-  }
+// HTTPS API, not SMTP — works on hosts (like Render's free tier) that block outbound port 25.
+export class ResendEmailService implements EmailService {
+  constructor(
+    private readonly apiKey: string,
+    private readonly fromEmail: string,
+    private readonly defaultFromName = 'Plinth',
+  ) {}
 
   async send(opts: SendEmailOptions): Promise<void> {
     const fromName = opts.fromName ?? this.defaultFromName;
-    await this.transporter.sendMail({
-      from:    `"${fromName}" <${this.user}>`,
-      to:      opts.to,
-      subject: opts.subject,
-      html:    opts.html,
-      text:    opts.text,
+    const res = await fetch('https://api.resend.com/emails', {
+      method:  'POST',
+      headers: {
+        Authorization:  `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from:    `${fromName} <${this.fromEmail}>`,
+        to:      opts.to,
+        subject: opts.subject,
+        html:    opts.html,
+        text:    opts.text,
+      }),
     });
+
+    if (!res.ok) {
+      throw new Error(`Resend send failed: ${res.status} ${await res.text()}`);
+    }
   }
 }
 

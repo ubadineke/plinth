@@ -24,8 +24,8 @@ const EnvSchema = z.object({
   DOCS_SHARED_API_KEY: z.string().optional(),
   CHECKOUT_CALLBACK_URL: z.string().url().optional(),
 
-  SMTP_USER: z.string().email().optional(),
-  SMTP_PASS: z.string().optional(),
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().email().optional(),
   SMTP_FROM_NAME: z.string().default('Plinth'),
 
   APP_BASE_URL: z.string().url().default('http://localhost:3000'),
