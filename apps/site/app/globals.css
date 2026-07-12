@@ -366,6 +366,24 @@ html.has-rive-cursor * {
   will-change: transform, opacity;
 }
 
+/* Trust polaroids: a whisper of sway so each card breathes on the wire like
+   it's caught in a light breeze. Tiny amplitude, slow, staggered per card via
+   an inline negative animation-delay. */
+@keyframes clothes-sway {
+  0%,
+  100% {
+    transform: rotate(-0.45deg);
+  }
+  50% {
+    transform: rotate(0.5deg);
+  }
+}
+.clothes-sway {
+  animation: clothes-sway 7s ease-in-out infinite;
+  transform-origin: 50% 0;
+  will-change: transform;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .card-lift,
   .card-lift:hover {
@@ -377,6 +395,9 @@ html.has-rive-cursor * {
     transform: none;
   }
   .cta-aurora {
+    animation: none;
+  }
+  .clothes-sway {
     animation: none;
   }
 }

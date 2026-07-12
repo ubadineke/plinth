@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import RiveCursor from "@/components/RiveCursor";
 import ScrollSnap from "@/components/ScrollSnap";
+import ScrollTransitions from "@/components/ScrollTransitions";
 import { SITE_URL, SITE_NAME, SITE_TITLE, SITE_DESCRIPTION } from "@/lib/site";
 
 /* Fonts are plain @font-face in globals.css (self-hosted in /public/fonts)
@@ -54,6 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="font-sans bg-bone text-ink antialiased">
         {children}
+        <ScrollTransitions />
         <ScrollSnap />
         <RiveCursor />
       </body>

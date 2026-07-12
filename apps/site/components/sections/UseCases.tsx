@@ -1,79 +1,33 @@
-import type { ComponentType } from "react";
 import Image from "next/image";
 import { Container, Section } from "./ui";
 import { Reveal } from "./Reveal";
-import {
-  CameraIcon,
-  PaletteIcon,
-  PortraitIcon,
-  CubeIcon,
-  SaasIcon,
-  SparkIcon,
-  ArrowRight,
-  type IconProps,
-} from "./icons";
+import { SparkIcon, ArrowRight } from "./icons";
+import { LottieOnce, RiveFillOnce, HouseRive } from "./BentoMedia";
 
 /* ──────────────────────────────────────────────────────────────
-   "One base, many businesses" as a bento board.
-
-   Every tile except the jade title and the Plinth mark is an ASSET
-   SLOT — a labelled placeholder telling the founder exactly which
-   illustration/photo to drop in. Little to no body copy: the notes
-   ARE the content. Once the art lands, this reads like a real board.
+   "One base, many businesses" as a bento board — each use-case
+   tile carries its own live asset (Rive / Lottie / screenshot /
+   photo). Motion plays once as each tile is first seen so the
+   board reads alive without a wall of competing loops.
    ────────────────────────────────────────────────────────────── */
 
-type AssetType = "Photo" | "Illustration" | "Product UI" | "Portrait" | "3D";
-type Tone = "bone" | "soft" | "jade";
-
-const typeIcon: Record<AssetType, ComponentType<IconProps>> = {
-  Photo: CameraIcon,
-  Illustration: PaletteIcon,
-  "Product UI": SaasIcon,
-  Portrait: PortraitIcon,
-  "3D": CubeIcon,
-};
-
-const toneCls: Record<Tone, string> = {
-  bone: "bg-bone border-ink/15",
-  soft: "bg-ink/[0.03] border-ink/15",
-  jade: "bg-jade/[0.06] border-jade/30",
-};
-
-function AssetSlot({
-  tag,
-  type,
-  note,
-  tone = "bone",
-}: {
-  tag: string;
-  type: AssetType;
-  note: string;
-  tone?: Tone;
-}) {
-  const Icon = typeIcon[type];
+function TileLabel({ children, dark = false }: { children: React.ReactNode; dark?: boolean }) {
   return (
-    <div className={`flex h-full flex-col rounded-2xl border border-dashed p-4 ${toneCls[tone]}`}>
-      <div className="flex items-start justify-between gap-2">
-        <span className="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-jade-600">
-          {tag}
-        </span>
-        <span className="shrink-0 rounded-full bg-white/70 px-2 py-0.5 font-mono text-[9px] uppercase tracking-wider text-ink/60 ring-1 ring-ink/10">
-          {type}
-        </span>
-      </div>
-      <div className="flex flex-1 items-center justify-center py-3">
-        <Icon className="h-8 w-8 text-ink/25" />
-      </div>
-      <p className="text-[11.5px] leading-snug text-ink/60">{note}</p>
-    </div>
+    <span
+      className={`font-mono text-[10px] font-medium uppercase tracking-[0.12em] ${
+        dark ? "text-white/90" : "text-jade-600"
+      }`}
+    >
+      {children}
+    </span>
   );
 }
 
 export default function UseCases() {
   return (
-    <Section id="use-cases" full className="bg-bone">
+    <Section id="use-cases" stage dwell className="bg-bone">
       <Container>
-        <div className="grid auto-rows-[168px] grid-cols-2 gap-3 md:auto-rows-[176px] md:grid-cols-4 md:gap-4">
+        <div className="grid auto-rows-[164px] grid-cols-2 gap-3 md:auto-rows-[150px] md:grid-cols-4 md:gap-4">
           {/* A — title (jade anchor) */}
           <Reveal className="col-span-2 row-span-2 md:col-start-1 md:row-start-1">
             <div className="flex h-full flex-col justify-between rounded-2xl bg-jade-600 p-6 text-white">
@@ -93,52 +47,70 @@ export default function UseCases() {
             </div>
           </Reveal>
 
-          {/* B — SaaS */}
+          {/* B — SaaS: a macOS-window dashboard screenshot peeking up from the bottom */}
           <Reveal delay={70} className="col-span-2 md:col-start-3 md:row-start-1">
-            <AssetSlot
-              tag="SaaS"
-              type="Product UI"
-              tone="soft"
-              note="Billing dashboard — a “payment recovered” toast; card → transfer retry. Dark product UI, wide."
-            />
+            <div className="relative h-full overflow-hidden rounded-2xl border border-ink/12 bg-ink/[0.03]">
+              <div className="absolute left-4 top-4 z-10 flex items-center gap-2">
+                <TileLabel>SaaS</TileLabel>
+                <span className="rounded-full bg-white/70 px-2 py-0.5 font-mono text-[9px] uppercase tracking-wider text-ink/60 ring-1 ring-ink/10">
+                  Product UI
+                </span>
+              </div>
+              <div className="pointer-events-none absolute right-3 top-[44%] w-[80%] overflow-hidden rounded-t-lg border border-ink/15 bg-white shadow-[0_-14px_36px_-20px_rgba(20,24,28,0.4)]">
+                <div className="flex items-center gap-1 border-b border-ink/10 bg-ink/[0.04] px-2 py-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-ink/15" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-ink/15" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-ink/15" />
+                </div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/bento/dashboard.png" alt="" className="block w-full" />
+              </div>
+            </div>
           </Reveal>
 
-          {/* C — Streaming */}
+          {/* C — Streaming: square Lottie beside the copy (the tile is wider than the art) */}
           <Reveal delay={140} className="col-span-2 md:col-start-3 md:row-start-2">
-            <AssetSlot
-              tag="Streaming"
-              type="Product UI"
-              note="Plan picker — Basic / Pro / Family, an upgrade mid-flow with a proration line."
-            />
+            <div className="flex h-full items-center gap-4 rounded-2xl border border-ink/12 bg-ink/[0.03] p-4">
+              <div className="aspect-square h-full shrink-0">
+                <LottieOnce src="/animations/streaming.lottie" />
+              </div>
+              <div className="min-w-0">
+                <TileLabel>Streaming</TileLabel>
+                <p className="mt-2 text-[12px] leading-snug text-ink/60">
+                  Plan picker: Basic, Pro, Family. Upgrades mid-flow, prorated to the kobo.
+                </p>
+              </div>
+            </div>
           </Reveal>
 
-          {/* D — Cooperative (tall) */}
+          {/* D — Cooperative / ajo / esusu (tall) */}
           <Reveal delay={210} className="col-span-1 row-span-2 md:col-start-1 md:row-start-3">
-            <AssetSlot
-              tag="Cooperative · ajo / esusu"
-              type="Illustration"
-              tone="jade"
-              note="Savings circle — hands passing naira, a rotating contribution ring. Warm editorial illustration (fits the cultural set)."
-            />
+            <div className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-jade/30 bg-jade/[0.06] p-4">
+              <TileLabel>Cooperative · ajo / esusu</TileLabel>
+              <div className="relative min-h-0 flex-1">
+                <LottieOnce src="/animations/cooperative.lottie" />
+              </div>
+            </div>
           </Reveal>
 
-          {/* E — School */}
+          {/* E — School: Rive "Pop up", fills the tile */}
           <Reveal delay={280} className="col-span-1 md:col-start-2 md:row-start-3">
-            <AssetSlot
-              tag="School"
-              type="Photo"
-              note="Student in uniform at a school gate, or a fees receipt."
-            />
+            <div className="relative h-full overflow-hidden rounded-2xl border border-ink/12 bg-ink/[0.03]">
+              <RiveFillOnce src="/animations/school.riv" stateMachine="State Machine 1" fit="cover" />
+              <span className="pointer-events-none absolute bottom-3 left-4 z-10">
+                <TileLabel>School</TileLabel>
+              </span>
+            </div>
           </Reveal>
 
-          {/* F — Landlord */}
+          {/* F — Landlord: house.riv, floors build 1 to 3 then back (top clips) */}
           <Reveal delay={350} className="col-span-1 md:col-start-2 md:row-start-4">
-            <AssetSlot
-              tag="Landlord"
-              type="Photo"
-              tone="soft"
-              note="Apartment keys, or a Lagos low-rise. Rent day."
-            />
+            <div className="relative h-full overflow-hidden rounded-2xl border border-ink/12 bg-ink/[0.03]">
+              <HouseRive src="/animations/house.riv" />
+              <span className="pointer-events-none absolute bottom-3 left-4 z-10">
+                <TileLabel>Landlord</TileLabel>
+              </span>
+            </div>
           </Reveal>
 
           {/* G — Plinth mark (real asset, no text) */}
@@ -170,13 +142,31 @@ export default function UseCases() {
             </a>
           </Reveal>
 
-          {/* I — human portrait (tall) */}
+          {/* I — Any business: hand-drawn business doodle (line art on white),
+              rotated to portrait so it fits the tall tile. Plain inline
+              styles, not a Tailwind arbitrary background utility class —
+              that wasn't being picked up (image rendered at native size and
+              got clipped by overflow-hidden instead of scaling to fit).
+              background-size: 100% auto fits the image to the tile's width
+              exactly (height scales proportionally and crops top/bottom via
+              overflow-hidden) — a "fit width" background-size has no native
+              CSS keyword, this is the standard way to express it. */}
           <Reveal delay={210} className="col-span-2 row-span-2 md:col-span-1 md:col-start-4 md:row-start-3">
-            <AssetSlot
-              tag="Any business"
-              type="Portrait"
-              note="A Nigerian founder or market vendor with a phone, natural light. Warm and human — the face of the section."
-            />
+            <div
+              role="img"
+              aria-label="Business ideas — charts, gears and growth, hand-drawn"
+              className="relative h-full overflow-hidden rounded-2xl border border-ink/12 bg-white"
+              style={{
+                backgroundImage: "url('/bento/any-business.jpg')",
+                backgroundSize: "100% auto",
+                backgroundPosition: "center",
+                backgroundRepeat: "no-repeat",
+              }}
+            >
+              <span className="absolute left-3 top-3 z-10 rounded-full bg-white/85 px-2.5 py-1 ring-1 ring-ink/10">
+                <TileLabel>Any business</TileLabel>
+              </span>
+            </div>
           </Reveal>
         </div>
       </Container>

@@ -23,11 +23,11 @@ export function CodePanel({ filename, code }: { filename: string; code: string }
 
   return (
     <div className="min-w-0 overflow-hidden rounded-2xl border border-ink/10 bg-ink-900 shadow-sm">
-      {/* window chrome */}
+      {/* window chrome — real macOS traffic lights */}
       <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
-        <span className="h-3 w-3 rounded-full bg-white/20" />
-        <span className="h-3 w-3 rounded-full bg-white/20" />
-        <span className="h-3 w-3 rounded-full bg-white/20" />
+        <span className="h-3 w-3 rounded-full bg-[#FF5F57]" />
+        <span className="h-3 w-3 rounded-full bg-[#FEBC2E]" />
+        <span className="h-3 w-3 rounded-full bg-[#28C840]" />
         <span className="ml-2 font-mono text-xs text-white/40">{filename}</span>
         <button
           type="button"

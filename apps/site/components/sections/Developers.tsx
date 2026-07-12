@@ -7,7 +7,7 @@ import { DOCS_URL } from "@/lib/site";
 const snippet = `import { Plinth } from "@plinth/sdk";
 const plinth = new Plinth(process.env.PLINTH_API_KEY);
 
-// 1. Define a plan (₦5,000/month — amounts are in kobo)
+// 1. Define a plan (₦5,000/month, amounts are in kobo)
 const plan = await plinth.plans.create({
   name: "Pro",
   amount: 500_000,
@@ -20,7 +20,7 @@ const sub = await plinth.subscriptions.create({
   plan: plan.id,
 });
 
-// 3. Ask who has access — your product gates on this
+// 3. Ask who has access; your product gates on this
 const access = await plinth.entitlements.get("cus_bob");
 // → { active: true, features: ["pro"], valid_until: "2026-07-25" }`;
 
@@ -28,7 +28,7 @@ const bullets = ["Clean REST API", "Typed SDKs", "Webhooks for every event", "Id
 
 export default function Developers() {
   return (
-    <Section id="developers" full className="bg-white">
+    <Section id="developers" stage dwell className="bg-white">
       <Container>
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
           <Reveal>
@@ -40,7 +40,7 @@ export default function Developers() {
                     Integrate in <span className="text-jade">a few lines.</span>
                   </>
                 }
-                sub="Drop Plinth in; don't rebuild billing. A clean API, SDKs, and webhooks — money-critical correctness handled for you."
+                sub="Drop Plinth in; don't rebuild billing. A clean API, SDKs, and webhooks. Money-critical correctness, handled for you."
               />
               <ul className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {bullets.map((b) => (

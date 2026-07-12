@@ -88,6 +88,19 @@ export default function Footer() {
         <p className="mt-10 text-xs text-ink/60">
           Naira (NGN). Amounts shown human-readable; the API uses kobo.
         </p>
+        {/* Freepik license: attribution required for the "any business" photo */}
+        <p className="mt-2 text-xs text-ink/45">
+          Imagery{" "}
+          <a
+            href="http://www.freepik.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline transition hover:text-ink/70"
+          >
+            designed by rawpixel.com / Freepik
+          </a>
+          .
+        </p>
       </Container>
 
       {/* ── regulatory base bar (dark) ── */}

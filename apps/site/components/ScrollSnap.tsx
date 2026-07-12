@@ -30,9 +30,18 @@ export default function ScrollSnap() {
       const main = document.querySelector("main");
       if (!main) return [] as number[];
       const y = window.scrollY;
-      return Array.from(main.children).map(
-        (el) => Math.round(el.getBoundingClientRect().top + y)
-      );
+      // Staged/pinned sections ([data-stage]/[data-pin]) are 200vh+ boxes whose
+      // panel only settles 100vh in (after the cover transition completes) —
+      // snap to the settled point, not the box top, or the snap lands the user
+      // mid-transition. Overlap staging is md+, so only offset there.
+      const md = window.matchMedia("(min-width: 768px)").matches;
+      return Array.from(main.children).map((el) => {
+        const offset =
+          md && el instanceof HTMLElement && ("stage" in el.dataset || "pin" in el.dataset)
+            ? window.innerHeight
+            : 0;
+        return Math.round(el.getBoundingClientRect().top + y + offset);
+      });
     };
 
     const cancel = () => {
@@ -45,6 +54,9 @@ export default function ScrollSnap() {
 
     const settle = () => {
       if (snapping) return;
+      // Stand down while a section transition is mid-flight (ScrollTransitions
+      // owns settling in that region; snapping there fights the transition).
+      if ((window as Window & { __plinthTxActive?: boolean }).__plinthTxActive) return;
       const y = window.scrollY;
       const vh = window.innerHeight;
       const maxY = document.documentElement.scrollHeight - vh;

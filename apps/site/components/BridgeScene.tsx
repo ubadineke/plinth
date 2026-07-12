@@ -2,7 +2,7 @@
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Line, AdaptiveDpr } from "@react-three/drei";
-import { Suspense, useEffect, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import Danfo from "./Danfo";
 import RoadLogos from "./RoadLogos";
@@ -473,9 +473,26 @@ function Rig({ reduce }: { reduce: boolean }) {
 }
 
 export default function BridgeScene({ reduce = false }: { reduce?: boolean }) {
+  const hostRef = useRef<HTMLDivElement>(null);
+  // Render only while the hero is actually on screen — a full-viewport WebGL
+  // scene animating at 60fps behind ten scrolled-past sections drags the whole
+  // page. R3F resumes cleanly when frameloop flips back to "always".
+  const [frameloop, setFrameloop] = useState<"always" | "never">("always");
+
+  useEffect(() => {
+    const el = hostRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) =>
+      setFrameloop(e.isIntersecting ? "always" : "never"),
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
   return (
-    <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-auto">
+    <div ref={hostRef} className="absolute inset-0 w-full h-full overflow-hidden pointer-events-auto">
       <Canvas
+        frameloop={frameloop}
         dpr={[1, 2]}
         gl={{ antialias: true, logarithmicDepthBuffer: true }}
         camera={{ position: [0, 2.0, 135], fov: 40, near: 0.1, far: 800 }}

@@ -5,7 +5,7 @@ import { Reveal } from "./Reveal";
    placeholder slots to be filled with consented customer quotes before launch. */
 export default function Testimonials() {
   return (
-    <Section id="testimonials" full className="bg-bone">
+    <Section id="testimonials" stage className="bg-bone">
       <Container>
         <Reveal>
           <SectionHeading center eyebrow="Social proof" title="What builders will say." />

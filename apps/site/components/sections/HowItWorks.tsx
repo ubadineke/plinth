@@ -29,14 +29,18 @@ const steps = [
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 const range = (p: number, a: number, b: number) => clamp01((p - a) / (b - a));
 
+/* The section is 380vh with a -100vh pull-up over Accounts: its FIRST 100vh of
+   scroll is the cover entrance (ScrollTransitions' scale-down/scale-down), which
+   ends at p = 100/(380-100) ≈ 0.36. All scrub windows start after that, so the
+   steps animate only once the section has fully landed — never mid-cover. */
 const STEP_WIN: [number, number][] = [
-  [0.06, 0.24],
-  [0.34, 0.52],
-  [0.62, 0.8],
+  [0.4, 0.54],
+  [0.61, 0.74],
+  [0.82, 0.95],
 ];
 const SEG_WIN: [number, number][] = [
-  [0.2, 0.38],
-  [0.48, 0.66],
+  [0.51, 0.64],
+  [0.71, 0.85],
 ];
 
 export default function HowItWorks() {
@@ -96,8 +100,25 @@ export default function HowItWorks() {
   }, []);
 
   return (
-    <section id="how-it-works" ref={sectionRef} className="relative scroll-mt-24 bg-bone md:h-[280vh]">
-      <div className="flex flex-col justify-center py-16 md:sticky md:top-0 md:h-screen md:py-0">
+    <section
+      id="how-it-works"
+      ref={sectionRef}
+      data-stage=""
+      // -mt-[100vh] pulls this section up over the pinned Accounts inner (which
+      // has 100vh of pin slack) so it slides up and plasters on top as you
+      // scroll; the ScrollTransitions controller drives the scale-down/scale-down
+      // effect across that overlap. Stacking is handled by DOM order plus the
+      // controller's per-transition z-index (incoming above outgoing).
+      // 380vh = 100vh cover entrance + 280vh for the steps scrub (see STEP_WIN).
+      className="relative scroll-mt-24 bg-bone motion-safe:md:h-[380vh] motion-safe:md:-mt-[100vh]"
+    >
+      {/* data-tx-target: transforms land on THIS inner element rather than the
+          outer <section> — a transform on the sticky element's ancestor would
+          break its pin. */}
+      <div
+        data-tx-target
+        className="flex flex-col justify-center bg-bone py-16 motion-safe:md:sticky motion-safe:md:top-0 motion-safe:md:h-screen md:py-0"
+      >
         <Container>
           <SectionHeading
             center
