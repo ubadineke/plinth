@@ -25,7 +25,7 @@ function TileLabel({ children, dark = false }: { children: React.ReactNode; dark
 
 export default function UseCases() {
   return (
-    <Section id="use-cases" stage className="bg-bone">
+    <Section id="use-cases" stage dwell className="bg-bone">
       <Container>
         <div className="grid auto-rows-[164px] grid-cols-2 gap-3 md:auto-rows-[150px] md:grid-cols-4 md:gap-4">
           {/* A — title (jade anchor) */}

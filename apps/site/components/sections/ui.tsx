@@ -23,6 +23,7 @@ export function Section({
   full = false,
   stage = false,
   pin = false,
+  dwell = false,
 }: {
   id?: string;
   className?: string;
@@ -44,15 +45,22 @@ export function Section({
       surface to cover. Use when a section is covered by its successor but
       should not itself cover its predecessor. */
   pin?: boolean;
+  /** Add ~¾-viewport of extra pinned height AFTER the section has fully
+      arrived, so it rests on screen (fully settled, nothing transitioning)
+      before the next section's cover transition begins on further scroll —
+      i.e. it doesn't immediately jump into the next screen. The extra height
+      lands at the bottom of the box, so the section's own arrival is unchanged;
+      only its exit (the next section covering it) is delayed. */
+  dwell?: boolean;
 }) {
   if (stage || pin) {
     return (
       <section
         id={id}
         {...(stage ? { "data-stage": "" } : { "data-pin": "" })}
-        className={`relative scroll-mt-24 motion-safe:md:h-[200vh] ${
-          stage ? "motion-safe:md:-mt-[100vh]" : ""
-        }`}
+        className={`relative scroll-mt-24 ${
+          dwell ? "motion-safe:md:h-[275vh]" : "motion-safe:md:h-[200vh]"
+        } ${stage ? "motion-safe:md:-mt-[100vh]" : ""}`}
       >
         <div
           data-tx-target

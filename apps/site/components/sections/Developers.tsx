@@ -28,7 +28,7 @@ const bullets = ["Clean REST API", "Typed SDKs", "Webhooks for every event", "Id
 
 export default function Developers() {
   return (
-    <Section id="developers" stage className="bg-white">
+    <Section id="developers" stage dwell className="bg-white">
       <Container>
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
           <Reveal>

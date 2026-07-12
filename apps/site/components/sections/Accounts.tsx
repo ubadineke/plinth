@@ -46,7 +46,10 @@ export default function Accounts() {
     // the overlap ("the foundation it's built on", literally). data-tx-target
     // marks the sticky inner as the transform target so the effect can't break
     // its own pin. Touch / reduced-motion: no pin, natural stacked flow.
-    <section id="accounts" data-pin="" className="relative scroll-mt-24 bg-white motion-safe:md:h-[200vh]">
+    // h-[275vh] = 200vh of pin + ~¾vh of dwell so Accounts rests fully settled
+    // before How It Works is pulled up over it — it shouldn't jump straight
+    // into the next screen.
+    <section id="accounts" data-pin="" className="relative scroll-mt-24 bg-white motion-safe:md:h-[275vh]">
       <div
         data-tx-target
         className="flex min-h-[100svh] flex-col justify-center bg-white py-16 motion-safe:md:sticky motion-safe:md:top-0 motion-safe:md:h-screen motion-safe:md:min-h-0 md:py-20"
