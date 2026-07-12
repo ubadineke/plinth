@@ -2,17 +2,17 @@
   "$schema": "https://mintlify.com/schema.json",
   "name": "Plinth",
   "logo": {
-    "dark": "/logo/logo.svg",
-    "light": "/logo/logo.svg"
+    "dark": "/logo/plinth-logo.png",
+    "light": "/logo/plinth-logo.png"
   },
-  "favicon": "/logo/logo.svg",
+  "favicon": "/logo/favicon.png",
   "colors": {
-    "primary": "#4f46e5",
-    "light": "#818cf8",
-    "dark": "#3730a3",
+    "primary": "#0FA37F",
+    "light": "#3BC0A1",
+    "dark": "#0B8366",
     "anchors": {
-      "from": "#4f46e5",
-      "to": "#818cf8"
+      "from": "#0FA37F",
+      "to": "#3BC0A1"
     }
   },
   "topbarLinks": [

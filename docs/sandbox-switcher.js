@@ -32,7 +32,7 @@
     badge.id = 'nomba-sandbox-badge';
     badge.style.cssText = [
       'position:fixed', 'bottom:20px', 'right:20px', 'z-index:9999',
-      'background:#4f46e5', 'color:#fff', 'padding:8px 14px',
+      'background:#0FA37F', 'color:#fff', 'padding:8px 14px',
       'border-radius:8px', 'font-size:12px', 'font-family:system-ui,sans-serif',
       'display:flex', 'align-items:center', 'gap:10px',
       'box-shadow:0 4px 12px rgba(0,0,0,0.15)',
