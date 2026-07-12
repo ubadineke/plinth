@@ -54,8 +54,8 @@ reads cheap.
 
 ## CTAs & voice
 
-- Primary action: **Schedule a demo** (jade, arrow). Secondary: **Watch a video** (play
-  glyph → product video). Nav keeps **Docs** + **Start building** — don't duplicate those
+- Primary action: **Try Demo** (jade, arrow) → links to the app. Secondary: **Watch a video**
+  (play glyph → product video). Nav keeps **Docs** + **Start building** — don't duplicate those
   as in-page CTAs.
 - Nomba attribution is quiet text ("Powered by Nomba"), never a pill/tag.
 - Pre-launch: never fabricate logos / metrics / testimonials — use `<Placeholder>`.

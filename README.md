@@ -15,11 +15,12 @@ consumer, not part of Plinth.)
 > **Judges & reviewers — two ways in:**
 >
 > **Option 1 — Live demo (recommended, no setup):**
-> 1. Open **[app.useplinth.xyz](https://app.useplinth.xyz)** in your browser.
-> 2. Click the **"Try Demo"** button on the landing page.
-> 3. You're dropped straight into a pre-seeded tenant dashboard (8 customers, all subscription
->    states, invoices, dunning board, webhooks). A guided spotlight tour starts automatically and
->    walks you through every key section — no account or credentials needed.
+> 1. Open **[useplinth.xyz](https://useplinth.xyz)** and click **"Try Demo"** in the hero — or go
+>    straight to **[app.useplinth.xyz](https://app.useplinth.xyz)**, which enters the demo automatically.
+> 2. Either way, you're dropped straight into a pre-seeded tenant dashboard (8 customers, all
+>    subscription states, invoices, dunning board, webhooks) within a couple seconds — no extra
+>    click, no account, no credentials needed. A guided spotlight tour starts automatically and
+>    walks you through every key section.
 >
 > **Option 2 — Local mock mode (no backend, no internet needed):**
 > ```bash

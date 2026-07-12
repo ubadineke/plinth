@@ -172,10 +172,10 @@ export default function Hero() {
           {/* ── CTAs (centered; stack on mobile) ── */}
           <div className="intro pointer-events-auto mt-12 flex flex-col items-center justify-center gap-3 sm:flex-row md:mt-9">
             <a
-              href="#start"
+              href={APP_URL}
               className="group inline-flex items-center gap-2.5 rounded-full bg-jade-600 px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-jade-700"
             >
-              Schedule a demo
+              Try Demo
               <LongArrow className="animate-nudge text-white/90" />
             </a>
             <button
